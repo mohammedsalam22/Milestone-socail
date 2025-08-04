@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import '../../core/servcies/api_service.dart';
+import '../../core/constants/api_endpoints.dart';
 import '../model/user_model.dart';
 
 class LoginApi {
@@ -12,7 +13,7 @@ class LoginApi {
   Future<UserModel> login(String userName, String password) async {
     try {
       final response = await _apiService.post(
-        '/api/users/auth/login/',
+        ApiEndpoints.login,
         data: {'username': userName, 'password': password},
       );
 

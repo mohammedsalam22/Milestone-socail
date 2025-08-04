@@ -1,9 +1,8 @@
 import '../../core/servcies/api_service.dart';
+import '../../core/constants/api_endpoints.dart';
 import '../model/post_model.dart';
 import 'package:dio/dio.dart';
 import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class PostApi {
   final ApiService _apiService;
@@ -12,7 +11,7 @@ class PostApi {
 
   Future<List<PostModel>> getPosts() async {
     try {
-      final response = await _apiService.get('/api/posts/posts');
+      final response = await _apiService.get(ApiEndpoints.posts);
 
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> postsData = response.data;
@@ -63,7 +62,7 @@ class PostApi {
       }
 
       final response = await _apiService.dio.post(
-        '/api/posts/posts',
+        ApiEndpoints.posts,
         data: formData,
         options: Options(contentType: 'multipart/form-data'),
       );
@@ -82,7 +81,9 @@ class PostApi {
 
   Future<void> deletePost(int postId) async {
     try {
-      final response = await _apiService.delete('/api/posts/posts/$postId');
+      final response = await _apiService.delete(
+        '${ApiEndpoints.posts}/$postId',
+      );
 
       if (response.statusCode != 204) {
         throw Exception(
@@ -94,55 +95,66 @@ class PostApi {
     }
   }
 
-  Future<http.Response> addComment({
+  Future<Response> addComment({
     required int postId,
     required String text,
-    required String token,
   }) async {
-    final url = Uri.parse('http://10.15.249.81:8000/api/posts/comments');
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'post': postId, 'text': text}),
-    );
-    return response;
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.comments,
+        data: {'post': postId, 'text': text},
+      );
+
+      if (response.statusCode == 201) {
+        return response;
+      } else {
+        throw Exception(
+          'Failed to add comment. Status code: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  Future<http.Response> deleteComment({
-    required int commentId,
-    required String token,
-  }) async {
-    final url = Uri.parse(
-      'http://10.15.249.81:8000/api/posts/comments/$commentId',
-    );
-    final response = await http.delete(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-    return response;
+  Future<Response> deleteComment({required int commentId}) async {
+    try {
+      final response = await _apiService.delete(
+        '${ApiEndpoints.comments}/$commentId',
+      );
+
+      if (response.statusCode == 204) {
+        return response;
+      } else {
+        throw Exception(
+          'Failed to delete comment. Status code: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  Future<http.Response> addReply({
+  Future<Response> addReply({
     required int postId,
     required int commentId,
     required String text,
-    required String token,
   }) async {
-    final url = Uri.parse('http://10.15.249.81:8000/api/posts/comments');
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'post': postId, 'comment': commentId, 'text': text}),
-    );
-    return response;
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.comments,
+        data: {'post': postId, 'comment': commentId, 'text': text},
+      );
+
+      if (response.statusCode == 201) {
+        return response;
+      } else {
+        throw Exception(
+          'Failed to add reply. Status code: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
   }
 }

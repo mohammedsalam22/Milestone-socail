@@ -46,42 +46,45 @@ class PostRepo {
   Future<bool> addComment({
     required int postId,
     required String text,
-    required String token,
   }) async {
-    final response = await _postApi.addComment(
-      postId: postId,
-      text: text,
-      token: token,
-    );
-    if (response.statusCode == 201) {
-      return true;
+    try {
+      final response = await _postApi.addComment(
+        postId: postId,
+        text: text,
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      return false;
     }
-    return false;
   }
 
   Future<bool> deleteComment({
     required int commentId,
-    required String token,
   }) async {
-    final response = await _postApi.deleteComment(
-      commentId: commentId,
-      token: token,
-    );
-    return response.statusCode == 204;
+    try {
+      final response = await _postApi.deleteComment(
+        commentId: commentId,
+      );
+      return response.statusCode == 204;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<bool> addReply({
     required int postId,
     required int commentId,
     required String text,
-    required String token,
   }) async {
-    final response = await _postApi.addReply(
-      postId: postId,
-      commentId: commentId,
-      text: text,
-      token: token,
-    );
-    return response.statusCode == 201;
+    try {
+      final response = await _postApi.addReply(
+        postId: postId,
+        commentId: commentId,
+        text: text,
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      return false;
+    }
   }
 }

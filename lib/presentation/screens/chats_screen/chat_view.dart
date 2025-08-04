@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/model/user_model.dart';
+import '../../../data/model/chat_room_model.dart';
+import '../../../bloc/chat/chat_cubit.dart';
+import '../../../bloc/chat/chat_state.dart';
 import '../../../generated/l10n.dart';
+import '../../../core/utils/role_utils.dart';
 import 'chat_screen.dart';
 import 'create_group_screen.dart';
 import 'widgets/chat_item.dart';
@@ -16,86 +21,74 @@ class ChatsView extends StatefulWidget {
 }
 
 class _ChatsViewState extends State<ChatsView> {
-  final List<Map<String, dynamic>> _chats = [
-    {
-      'id': 1,
-      'name': 'Parent-Teacher Group',
-      'avatar': 'PT',
-      'lastMessage': 'Meeting scheduled for tomorrow at 3 PM',
-      'lastMessageTime': '2:30 PM',
-      'unreadCount': 3,
-      'isGroup': true,
-      'members': ['Admin', 'Sarah Wilson', 'Mike Johnson', 'Emily Davis'],
-      'isMuted': false,
-      'isPinned': true,
-    },
-    {
-      'id': 2,
-      'name': 'Sarah Wilson',
-      'avatar': 'S',
-      'lastMessage': 'Thank you for the update!',
-      'lastMessageTime': '1:45 PM',
-      'unreadCount': 0,
-      'isGroup': false,
-      'members': ['Admin', 'Sarah Wilson'],
-      'isMuted': false,
-      'isPinned': false,
-    },
-    {
-      'id': 3,
-      'name': 'Mike Johnson',
-      'avatar': 'M',
-      'lastMessage': 'Can we discuss the homework assignment?',
-      'lastMessageTime': '11:20 AM',
-      'unreadCount': 1,
-      'isGroup': false,
-      'members': ['Admin', 'Mike Johnson'],
-      'isMuted': true,
-      'isPinned': false,
-    },
-    {
-      'id': 4,
-      'name': 'Science Class Group',
-      'avatar': 'SC',
-      'lastMessage': 'Great work on the experiments!',
-      'lastMessageTime': 'Yesterday',
-      'unreadCount': 0,
-      'isGroup': true,
-      'members': ['Admin', 'Students'],
-      'isMuted': false,
-      'isPinned': false,
-    },
-    {
-      'id': 5,
-      'name': 'Emily Davis',
-      'avatar': 'E',
-      'lastMessage': 'I have a question about the project',
-      'lastMessageTime': 'Yesterday',
-      'unreadCount': 2,
-      'isGroup': false,
-      'members': ['Admin', 'Emily Davis'],
-      'isMuted': false,
-      'isPinned': false,
-    },
-  ];
+  late ChatCubit _chatCubit;
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
 
-  bool get _isAdmin => widget.user.role.toLowerCase() == 'admin';
+  @override
+  void initState() {
+    super.initState();
+    _chatCubit = context.read<ChatCubit>();
+    // Ensure we have the correct state when returning to this screen
+    if (_chatCubit.chatRooms.isNotEmpty) {
+      // If we have data, restore the loaded state
+      _chatCubit.restoreChatRoomsState();
+    } else {
+      // If no data, fetch it
+      _chatCubit.getChatRooms();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // This ensures the state is correct when the widget is rebuilt
+    if (_chatCubit.chatRooms.isNotEmpty &&
+        _chatCubit.state is! ChatRoomsLoaded) {
+      _chatCubit.restoreChatRoomsState();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool get _isAdmin => RoleUtils.isAdmin(widget.user.role);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text(
-          S.of(context).chats,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search chats...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.grey[600]),
+                ),
+                style: const TextStyle(fontSize: 18),
+                onChanged: (query) {
+                  _chatCubit.searchChatRooms(query);
+                },
+              )
+            : Text(
+                S.of(context).chats,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
         actions: [
-          IconButton(onPressed: _searchChats, icon: const Icon(Icons.search)),
-          if (_isAdmin)
+          if (_isSearching)
+            IconButton(onPressed: _cancelSearch, icon: const Icon(Icons.close))
+          else
+            IconButton(onPressed: _startSearch, icon: const Icon(Icons.search)),
+          if (_isAdmin && !_isSearching)
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               onSelected: (value) {
@@ -130,24 +123,120 @@ class _ChatsViewState extends State<ChatsView> {
             ),
         ],
       ),
-      body: _chats.isEmpty
-          ? EmptyChats(currentUser: widget.user)
-          : ListView.builder(
-              itemCount: _chats.length,
-              itemBuilder: (context, index) {
-                final chat = _chats[index];
-                return ChatItem(
-                  chat: chat,
-                  currentUser: widget.user,
-                  onTap: () => _openChat(chat),
-                  onTogglePin: _togglePin,
-                  onToggleMute: _toggleMute,
-                  onDelete: _deleteChat,
-                );
+      body: BlocBuilder<ChatCubit, ChatState>(
+        builder: (context, state) {
+          // Get the current chat rooms (either from state or memory)
+          final chatRooms = state is ChatRoomsLoaded
+              ? state.filteredChatRooms
+              : _chatCubit.chatRooms;
+
+          if (state is ChatRoomsLoading) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (state is ChatRoomsError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Error: ${state.message}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _chatCubit.refreshChatRooms(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          } else if (chatRooms.isNotEmpty) {
+            // Show chat rooms if we have them (regardless of state)
+            return RefreshIndicator(
+              onRefresh: () async {
+                _chatCubit.refreshChatRooms();
               },
-            ),
+              child: ListView.builder(
+                itemCount: chatRooms.length,
+                itemBuilder: (context, index) {
+                  final chatRoom = chatRooms[index];
+                  return _buildChatItem(chatRoom);
+                },
+              ),
+            );
+          } else {
+            // Show empty state or loading
+            if (state is ChatRoomsLoaded && state.chatRooms.isEmpty) {
+              return EmptyChats(currentUser: widget.user);
+            } else if (state is ChatRoomsLoaded &&
+                state.filteredChatRooms.isEmpty &&
+                _searchController.text.isNotEmpty) {
+              // Show no results found when searching
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No chats found for "${_searchController.text}"',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const Center(child: CircularProgressIndicator());
+          }
+        },
+      ),
       floatingActionButton: _isAdmin ? _buildCreateButton() : null,
     );
+  }
+
+  Widget _buildChatItem(ChatRoomModel chatRoom) {
+    final chat = {
+      'id': chatRoom.id,
+      'name': chatRoom.studentName,
+      'avatar': chatRoom.studentName.isNotEmpty
+          ? chatRoom.studentName[0].toUpperCase()
+          : '?',
+      'lastMessage': chatRoom.lastMessage?.content ?? 'No messages yet',
+      'lastMessageTime': chatRoom.lastMessage != null
+          ? _formatTime(chatRoom.lastMessage!.createdAt)
+          : '',
+      'unreadCount': 0, // TODO: Implement unread count
+      'isGroup': false,
+      'members': [
+        widget.user.firstName + ' ' + widget.user.lastName,
+        chatRoom.studentName,
+      ],
+      'isMuted': false,
+      'isPinned': false,
+    };
+
+    return ChatItem(
+      chat: chat,
+      currentUser: widget.user,
+      onTap: () => _openChat(chatRoom),
+      onTogglePin: _togglePin,
+      onToggleMute: _toggleMute,
+      onDelete: _deleteChat,
+    );
+  }
+
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    final difference = now.difference(time);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   Widget _buildCreateButton() {
@@ -156,6 +245,8 @@ class _ChatsViewState extends State<ChatsView> {
       backgroundColor: Theme.of(context).colorScheme.primary,
       foregroundColor: Colors.white,
       child: const Icon(Icons.chat),
+      tooltip: 'Create New Chat',
+      heroTag: 'create_chat_fab',
     );
   }
 
@@ -191,11 +282,11 @@ class _ChatsViewState extends State<ChatsView> {
     );
   }
 
-  void _openChat(Map<String, dynamic> chat) {
+  void _openChat(ChatRoomModel chatRoom) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ChatScreen(chat: chat, user: widget.user),
+        builder: (context) => ChatScreen(chatRoom: chatRoom, user: widget.user),
       ),
     );
   }
@@ -207,9 +298,7 @@ class _ChatsViewState extends State<ChatsView> {
         builder: (context) => CreateGroupScreen(
           user: widget.user,
           onGroupCreated: (newGroup) {
-            setState(() {
-              _chats.insert(0, newGroup);
-            });
+            // TODO: Implement group creation
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(S.of(context).groupCreatedSuccessfully)),
             );
@@ -222,57 +311,42 @@ class _ChatsViewState extends State<ChatsView> {
   void _createNewChat() {
     // TODO: Implement new chat creation
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(S.of(context).newChatFeatureComingSoon)),
+      const SnackBar(content: Text('New chat feature coming soon!')),
     );
   }
 
-  void _searchChats() {
-    // TODO: Implement chat search
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(S.of(context).searchFeatureComingSoon)),
-    );
+  void _startSearch() {
+    setState(() {
+      _isSearching = true;
+    });
+  }
+
+  void _cancelSearch() {
+    setState(() {
+      _isSearching = false;
+      _searchController.clear();
+    });
+    _chatCubit.searchChatRooms(''); // Reset to show all chats
   }
 
   void _togglePin(int chatId) {
-    setState(() {
-      final chat = _chats.firstWhere((chat) => chat['id'] == chatId);
-      chat['isPinned'] = !chat['isPinned'];
-    });
+    // TODO: Implement pin functionality
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Pin feature coming soon!')));
   }
 
   void _toggleMute(int chatId) {
-    setState(() {
-      final chat = _chats.firstWhere((chat) => chat['id'] == chatId);
-      chat['isMuted'] = !chat['isMuted'];
-    });
+    // TODO: Implement mute functionality
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Mute feature coming soon!')));
   }
 
   void _deleteChat(int chatId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(S.of(context).deleteChat),
-        content: Text(S.of(context).areYouSureDeleteChat),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(S.of(context).cancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _chats.removeWhere((chat) => chat['id'] == chatId);
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(S.of(context).chatDeletedSuccessfully)),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(S.of(context).delete),
-          ),
-        ],
-      ),
+    // TODO: Implement delete functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Delete feature coming soon!')),
     );
   }
 }

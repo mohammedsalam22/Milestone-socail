@@ -5,13 +5,14 @@ import '../login_screen/login_view.dart';
 import '../../shared/theme_switcher.dart';
 import '../../shared/language_switcher.dart';
 import '../../../generated/l10n.dart';
+import '../../../core/utils/role_utils.dart';
 
 class ProfileView extends StatelessWidget {
   final UserModel user;
 
   const ProfileView({super.key, required this.user});
 
-  bool get _isAdmin => user.role.toLowerCase() == 'admin';
+  bool get _isAdmin => RoleUtils.isAdmin(user.role);
 
   @override
   Widget build(BuildContext context) {

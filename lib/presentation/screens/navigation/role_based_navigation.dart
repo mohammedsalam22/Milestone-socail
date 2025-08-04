@@ -28,6 +28,8 @@ class RoleBasedNavigation extends StatelessWidget {
   Widget _buildNavigationBasedOnRole() {
     switch (user.role.toLowerCase()) {
       case 'admin':
+      case 'teacher':
+      case 'cooperator':
         return AdminNavigation(user: user);
       case 'parent':
         return ParentNavigation(user: user);

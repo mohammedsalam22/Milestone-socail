@@ -10,6 +10,7 @@ import 'widgets/post_card.dart';
 import 'widgets/create_post_bottom_sheet.dart';
 import 'widgets/files_bottom_sheet.dart';
 import '../../../generated/l10n.dart';
+import '../../../core/utils/role_utils.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class PostsView extends StatefulWidget {
@@ -84,7 +85,7 @@ class _PostsViewState extends State<PostsView> {
     _postsCubit.getPosts();
   }
 
-  bool get _isAdmin => widget.user.role.toLowerCase() == 'admin';
+  bool get _isAdmin => RoleUtils.isAdmin(widget.user.role);
 
   @override
   Widget build(BuildContext context) {
@@ -337,6 +338,8 @@ class _PostsViewState extends State<PostsView> {
       backgroundColor: Theme.of(context).colorScheme.primary,
       foregroundColor: Colors.white,
       child: const Icon(Icons.add),
+      tooltip: 'Create New Post',
+      heroTag: 'create_post_fab',
     );
   }
 
@@ -354,7 +357,9 @@ class _PostsViewState extends State<PostsView> {
             text: newPost['content'] ?? '',
             isPublic: newPost['isPublic'] ?? true,
             attachments: newPost['attachments'] ?? [],
-            sectionIds: newPost['sectionIds'] ?? [],
+            sectionIds: (newPost['sectionIds'] as List<int>)
+                .map((id) => id.toString())
+                .toList(),
           );
         },
       ),

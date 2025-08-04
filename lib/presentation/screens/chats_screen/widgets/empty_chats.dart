@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../../data/model/user_model.dart';
 import '../../../../../generated/l10n.dart';
+import '../../../../../core/utils/role_utils.dart';
 
 class EmptyChats extends StatelessWidget {
   final UserModel currentUser;
@@ -9,7 +10,7 @@ class EmptyChats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = currentUser.role.toLowerCase() == 'admin';
+    final isAdmin = RoleUtils.isAdmin(currentUser.role);
 
     return Center(
       child: Column(

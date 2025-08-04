@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../../data/model/post_model.dart';
 import '../../../../../data/model/user_model.dart';
 import '../../../../../generated/l10n.dart';
+import '../../../../../core/utils/role_utils.dart';
 
 class CommentCard extends StatelessWidget {
   final CommentModel comment;
@@ -21,7 +22,7 @@ class CommentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAuthorOrAdmin =
         comment.user.username == currentUser.username ||
-        currentUser.role.toLowerCase() == 'admin';
+        RoleUtils.isAdmin(currentUser.role);
 
     return GestureDetector(
       onLongPress: isAuthorOrAdmin ? onDelete : null,
@@ -174,7 +175,7 @@ class ReplyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAuthorOrAdmin =
         reply.user.username == currentUser.username ||
-        currentUser.role.toLowerCase() == 'admin';
+        RoleUtils.isAdmin(currentUser.role);
 
     return GestureDetector(
       onLongPress: isAuthorOrAdmin ? onDelete : null,

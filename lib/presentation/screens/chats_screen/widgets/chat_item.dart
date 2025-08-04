@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../../data/model/user_model.dart';
 import '../../../../../generated/l10n.dart';
+import '../../../../../core/utils/role_utils.dart';
 
 class ChatItem extends StatelessWidget {
   final Map<String, dynamic> chat;
@@ -22,7 +23,7 @@ class ChatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = currentUser.role.toLowerCase() == 'admin';
+    final isAdmin = RoleUtils.isAdmin(currentUser.role);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

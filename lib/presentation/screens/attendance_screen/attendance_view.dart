@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/model/user_model.dart';
 import '../../../generated/l10n.dart';
+import '../../../core/utils/role_utils.dart';
 
 class AttendanceView extends StatefulWidget {
   final UserModel user;
@@ -53,7 +54,7 @@ class _AttendanceViewState extends State<AttendanceView> {
   String _selectedFilter = 'All';
   final List<String> _filterOptions = ['All', 'Present', 'Absent', 'Late'];
 
-  bool get _isAdmin => widget.user.role.toLowerCase() == 'admin';
+  bool get _isAdmin => RoleUtils.isAdmin(widget.user.role);
 
   @override
   Widget build(BuildContext context) {

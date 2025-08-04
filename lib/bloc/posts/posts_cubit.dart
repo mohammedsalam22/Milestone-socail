@@ -92,17 +92,9 @@ class PostsCubit extends Cubit<PostsState> {
     }
   }
 
-  Future<void> addComment({
-    required int postId,
-    required String text,
-    required String token,
-  }) async {
+  Future<void> addComment({required int postId, required String text}) async {
     try {
-      final success = await _postRepo.addComment(
-        postId: postId,
-        text: text,
-        token: token,
-      );
+      final success = await _postRepo.addComment(postId: postId, text: text);
       if (success) {
         await getPosts(); // Refresh posts to get new comments
       } else {
@@ -113,15 +105,9 @@ class PostsCubit extends Cubit<PostsState> {
     }
   }
 
-  Future<void> deleteComment({
-    required int commentId,
-    required String token,
-  }) async {
+  Future<void> deleteComment({required int commentId}) async {
     try {
-      final success = await _postRepo.deleteComment(
-        commentId: commentId,
-        token: token,
-      );
+      final success = await _postRepo.deleteComment(commentId: commentId);
       if (success) {
         await getPosts(); // Refresh posts to get updated comments
       } else {
@@ -136,14 +122,12 @@ class PostsCubit extends Cubit<PostsState> {
     required int postId,
     required int commentId,
     required String text,
-    required String token,
   }) async {
     try {
       final success = await _postRepo.addReply(
         postId: postId,
         commentId: commentId,
         text: text,
-        token: token,
       );
       if (success) {
         await getPosts(); // Refresh posts to get new replies

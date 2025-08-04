@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'bloc/login/login_cubit.dart';
 import 'bloc/posts/posts_cubit.dart';
 import 'bloc/sections/sections_cubit.dart';
+import 'bloc/chat/chat_cubit.dart';
 
 // theme / ui
 import 'core/theme/app_theme.dart';
@@ -55,6 +56,7 @@ class MyApp extends StatelessWidget {
         BlocProvider<SectionsCubit>(
           create: (_) => DIContainer.get<SectionsCubit>(),
         ),
+        BlocProvider<ChatCubit>(create: (_) => DIContainer.get<ChatCubit>()),
       ],
       child: ValueListenableBuilder<bool>(
         valueListenable: isDarkMode,

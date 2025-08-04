@@ -1,4 +1,4 @@
 class ApiConstants {
-  static const String baseUrl = 'http://10.15.249.81:8000';
+  static const String baseUrl = 'http://10.218.65.81:8000';
 
 }

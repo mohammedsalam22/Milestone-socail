@@ -5,13 +5,16 @@ import 'package:get_it/get_it.dart';
 import 'bloc/login/login_cubit.dart';
 import 'bloc/posts/posts_cubit.dart';
 import 'bloc/sections/sections_cubit.dart';
+import 'bloc/chat/chat_cubit.dart';
 import 'core/servcies/api_service.dart';
 import 'data/api/login_api.dart';
 import 'data/api/post_api.dart';
 import 'data/api/section_api.dart';
+import 'data/api/chat_api.dart';
 import 'data/repo/login_repo.dart';
 import 'data/repo/post_repo.dart';
 import 'data/repo/section_repo.dart';
+import 'data/repo/chat_repo.dart';
 
 class DIContainer {
   static final GetIt _getIt = GetIt.instance;
@@ -33,6 +36,7 @@ class DIContainer {
     _getIt.registerLazySingleton<SectionApi>(
       () => SectionApi(_getIt<ApiService>()),
     );
+    _getIt.registerLazySingleton<ChatApi>(() => ChatApi(_getIt<ApiService>()));
 
     // Repositories
     _getIt.registerLazySingleton<LoginRepo>(
@@ -42,6 +46,7 @@ class DIContainer {
     _getIt.registerLazySingleton<SectionRepo>(
       () => SectionRepo(_getIt<SectionApi>()),
     );
+    _getIt.registerLazySingleton<ChatRepo>(() => ChatRepo(_getIt<ChatApi>()));
 
     // Cubits
     _getIt.registerFactory<LoginCubit>(() => LoginCubit(_getIt<LoginRepo>()));
@@ -49,6 +54,7 @@ class DIContainer {
     _getIt.registerFactory<SectionsCubit>(
       () => SectionsCubit(_getIt<SectionRepo>()),
     );
+    _getIt.registerLazySingleton<ChatCubit>(() => ChatCubit(_getIt<ChatRepo>()));
   }
 
   // Getter methods

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../bloc/posts/posts_cubit.dart';
 import '../../../../bloc/posts/posts_state.dart';
 import '../../../../data/model/post_model.dart';
@@ -156,23 +155,18 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 
   void _handleCommentSubmit(String text, bool isReply, int? replyToId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
-
     if (isReply && replyToId != null) {
       // Add as reply
       await context.read<PostsCubit>().addReply(
         postId: widget.post['id'],
         commentId: replyToId,
         text: text,
-        token: token,
       );
     } else {
       // Add as new comment
       await context.read<PostsCubit>().addComment(
         postId: widget.post['id'],
         text: text,
-        token: token,
       );
     }
 
@@ -200,11 +194,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
       ),
     );
     if (confirmed == true) {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token') ?? '';
       await context.read<PostsCubit>().deleteComment(
         commentId: commentId,
-        token: token,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
