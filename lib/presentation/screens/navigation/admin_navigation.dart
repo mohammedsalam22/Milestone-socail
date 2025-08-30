@@ -3,6 +3,7 @@ import '../../../data/model/user_model.dart';
 import '../chats_screen/chat_view.dart';
 import '../posts_screen/posts_view.dart';
 import '../attendance_screen/attendance_view.dart';
+import '../incidents_screen/incidents_view.dart';
 import '../profile_screen/profile_view.dart';
 
 class AdminNavigation extends StatefulWidget {
@@ -26,6 +27,7 @@ class _AdminNavigationState extends State<AdminNavigation> {
       PostsView(user: widget.user),
       ChatsView(user: widget.user),
       AttendanceView(user: widget.user),
+      IncidentsView(user: widget.user),
       ProfileView(user: widget.user),
     ]);
   }
@@ -50,6 +52,10 @@ class _AdminNavigationState extends State<AdminNavigation> {
           BottomNavigationBarItem(
             icon: Icon(Icons.people),
             label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.report_problem),
+            label: 'Incidents',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

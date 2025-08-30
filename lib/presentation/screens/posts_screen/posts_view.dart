@@ -11,6 +11,7 @@ import 'widgets/create_post_bottom_sheet.dart';
 import 'widgets/files_bottom_sheet.dart';
 import '../../../generated/l10n.dart';
 import '../../../core/utils/role_utils.dart';
+import '../../../core/constants/api_endpoints.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class PostsView extends StatefulWidget {
@@ -254,7 +255,7 @@ class _PostsViewState extends State<PostsView> {
 
   // Convert PostModel to Map for compatibility with existing PostCard
   Map<String, dynamic> _convertPostModelToMap(PostModel post) {
-    const String baseUrl = 'http://10.15.249.81:8000/storage/';
+    final String baseUrl = '${ApiEndpoints.baseUrl}/storage/';
     return {
       'id': post.id,
       'title': post.title,

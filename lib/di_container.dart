@@ -6,15 +6,21 @@ import 'bloc/login/login_cubit.dart';
 import 'bloc/posts/posts_cubit.dart';
 import 'bloc/sections/sections_cubit.dart';
 import 'bloc/chat/chat_cubit.dart';
+import 'bloc/incidents/incidents_cubit.dart';
+import 'bloc/students/students_cubit.dart';
 import 'core/servcies/api_service.dart';
 import 'data/api/login_api.dart';
 import 'data/api/post_api.dart';
 import 'data/api/section_api.dart';
 import 'data/api/chat_api.dart';
+import 'data/api/incident_api.dart';
+import 'data/api/student_api.dart';
 import 'data/repo/login_repo.dart';
 import 'data/repo/post_repo.dart';
 import 'data/repo/section_repo.dart';
 import 'data/repo/chat_repo.dart';
+import 'data/repo/incident_repo.dart';
+import 'data/repo/student_repo.dart';
 
 class DIContainer {
   static final GetIt _getIt = GetIt.instance;
@@ -37,6 +43,8 @@ class DIContainer {
       () => SectionApi(_getIt<ApiService>()),
     );
     _getIt.registerLazySingleton<ChatApi>(() => ChatApi(_getIt<ApiService>()));
+    _getIt.registerLazySingleton<IncidentApi>(() => IncidentApi(_getIt<ApiService>()));
+    _getIt.registerLazySingleton<StudentApi>(() => StudentApi(_getIt<ApiService>()));
 
     // Repositories
     _getIt.registerLazySingleton<LoginRepo>(
@@ -47,6 +55,8 @@ class DIContainer {
       () => SectionRepo(_getIt<SectionApi>()),
     );
     _getIt.registerLazySingleton<ChatRepo>(() => ChatRepo(_getIt<ChatApi>()));
+    _getIt.registerLazySingleton<IncidentRepo>(() => IncidentRepo(_getIt<IncidentApi>()));
+    _getIt.registerLazySingleton<StudentRepo>(() => StudentRepo(_getIt<StudentApi>()));
 
     // Cubits
     _getIt.registerFactory<LoginCubit>(() => LoginCubit(_getIt<LoginRepo>()));
@@ -55,6 +65,8 @@ class DIContainer {
       () => SectionsCubit(_getIt<SectionRepo>()),
     );
     _getIt.registerLazySingleton<ChatCubit>(() => ChatCubit(_getIt<ChatRepo>()));
+    _getIt.registerFactory<IncidentsCubit>(() => IncidentsCubit(_getIt<IncidentRepo>()));
+    _getIt.registerFactory<StudentsCubit>(() => StudentsCubit(_getIt<StudentRepo>()));
   }
 
   // Getter methods

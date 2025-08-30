@@ -6,6 +6,8 @@ import 'bloc/login/login_cubit.dart';
 import 'bloc/posts/posts_cubit.dart';
 import 'bloc/sections/sections_cubit.dart';
 import 'bloc/chat/chat_cubit.dart';
+import 'bloc/incidents/incidents_cubit.dart';
+import 'bloc/students/students_cubit.dart';
 
 // theme / ui
 import 'core/theme/app_theme.dart';
@@ -57,6 +59,8 @@ class MyApp extends StatelessWidget {
           create: (_) => DIContainer.get<SectionsCubit>(),
         ),
         BlocProvider<ChatCubit>(create: (_) => DIContainer.get<ChatCubit>()),
+        BlocProvider<IncidentsCubit>(create: (_) => DIContainer.get<IncidentsCubit>()),
+        BlocProvider<StudentsCubit>(create: (_) => DIContainer.get<StudentsCubit>()),
       ],
       child: ValueListenableBuilder<bool>(
         valueListenable: isDarkMode,
