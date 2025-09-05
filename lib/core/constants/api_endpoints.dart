@@ -11,6 +11,7 @@ class ApiEndpoints {
   static const String comments = '/api/posts/comments';
   static const String students = '/api/users/students';
   static const String incidents = '/api/school/event';
+  static const String attendances = '/api/school/attendances/';
 
   // WebSocket Endpoints
   static const String chatWebSocket = '/ws/chat';
