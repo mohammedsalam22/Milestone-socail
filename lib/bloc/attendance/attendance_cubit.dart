@@ -29,6 +29,22 @@ class AttendanceCubit extends Cubit<AttendanceState> {
     }
   }
 
+  Future<void> getStudentAttendances({required int studentId}) async {
+    if (isClosed) return;
+    emit(AttendanceLoading());
+    try {
+      final attendances = await _attendanceRepo.getStudentAttendances(
+        studentId: studentId,
+      );
+      if (isClosed) return;
+      _allAttendances = attendances;
+      emit(AttendanceLoaded(_allAttendances));
+    } catch (e) {
+      if (isClosed) return;
+      emit(AttendanceError(e.toString()));
+    }
+  }
+
   Future<void> createAttendances({
     required List<AttendanceModel> attendances,
   }) async {

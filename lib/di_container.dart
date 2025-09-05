@@ -9,6 +9,7 @@ import 'bloc/chat/chat_cubit.dart';
 import 'bloc/incidents/incidents_cubit.dart';
 import 'bloc/students/students_cubit.dart';
 import 'bloc/attendance/attendance_cubit.dart';
+import 'bloc/marks/marks_cubit.dart';
 import 'core/servcies/api_service.dart';
 import 'data/api/login_api.dart';
 import 'data/api/post_api.dart';
@@ -17,6 +18,7 @@ import 'data/api/chat_api.dart';
 import 'data/api/incident_api.dart';
 import 'data/api/student_api.dart';
 import 'data/api/attendance_api.dart';
+import 'data/api/mark_api.dart';
 import 'data/repo/login_repo.dart';
 import 'data/repo/post_repo.dart';
 import 'data/repo/section_repo.dart';
@@ -24,6 +26,7 @@ import 'data/repo/chat_repo.dart';
 import 'data/repo/incident_repo.dart';
 import 'data/repo/student_repo.dart';
 import 'data/repo/attendance_repo.dart';
+import 'data/repo/mark_repo.dart';
 
 class DIContainer {
   static final GetIt _getIt = GetIt.instance;
@@ -55,6 +58,7 @@ class DIContainer {
     _getIt.registerLazySingleton<AttendanceApi>(
       () => AttendanceApi(_getIt<ApiService>()),
     );
+    _getIt.registerLazySingleton<MarkApi>(() => MarkApi(_getIt<ApiService>()));
 
     // Repositories
     _getIt.registerLazySingleton<LoginRepo>(
@@ -74,6 +78,7 @@ class DIContainer {
     _getIt.registerLazySingleton<AttendanceRepo>(
       () => AttendanceRepo(_getIt<AttendanceApi>()),
     );
+    _getIt.registerLazySingleton<MarkRepo>(() => MarkRepo(_getIt<MarkApi>()));
 
     // Cubits
     _getIt.registerFactory<LoginCubit>(() => LoginCubit(_getIt<LoginRepo>()));
@@ -93,6 +98,7 @@ class DIContainer {
     _getIt.registerFactory<AttendanceCubit>(
       () => AttendanceCubit(_getIt<AttendanceRepo>()),
     );
+    _getIt.registerFactory<MarksCubit>(() => MarksCubit(_getIt<MarkRepo>()));
   }
 
   // Getter methods

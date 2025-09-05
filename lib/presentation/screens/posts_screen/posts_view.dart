@@ -27,7 +27,7 @@ class _PostsViewState extends State<PostsView> {
   late final PostsCubit _postsCubit;
   final ScrollController _scrollController = ScrollController();
   bool _showNewPostsBanner = false;
-  List<PostModel> _pendingNewPosts = [];
+  final List<PostModel> _pendingNewPosts = [];
 
   @override
   void initState() {

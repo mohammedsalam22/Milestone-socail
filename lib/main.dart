@@ -9,6 +9,7 @@ import 'bloc/chat/chat_cubit.dart';
 import 'bloc/incidents/incidents_cubit.dart';
 import 'bloc/students/students_cubit.dart';
 import 'bloc/attendance/attendance_cubit.dart';
+import 'bloc/marks/marks_cubit.dart';
 
 // theme / ui
 import 'core/theme/app_theme.dart';
@@ -44,9 +45,32 @@ class MyApp extends StatelessWidget {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
     final userJson = prefs.getString('user_info');
-    if (token != null && userJson != null) {
-      return jsonDecode(userJson) as Map<String, dynamic>;
+    final studentDataJson = prefs.getString('student_data');
+
+    print('🔍 Loading stored user data...');
+    print('📱 Token exists: ${token != null}');
+    print('👤 User info exists: ${userJson != null}');
+    print('🎓 Student data exists: ${studentDataJson != null}');
+
+    if (token != null) {
+      // If we have student data, use it as the primary source
+      if (studentDataJson != null) {
+        print('🎓 Using student data as primary source');
+        final studentData = jsonDecode(studentDataJson) as Map<String, dynamic>;
+        print('📊 Student data keys: ${studentData.keys.toList()}');
+        return studentData;
+      }
+
+      // Fallback to user info if no student data
+      if (userJson != null) {
+        print('👤 Using user info as fallback');
+        final userData = jsonDecode(userJson) as Map<String, dynamic>;
+        print('📊 User data keys: ${userData.keys.toList()}');
+        return userData;
+      }
     }
+
+    print('❌ No stored user data found');
     return null;
   }
 
@@ -69,6 +93,7 @@ class MyApp extends StatelessWidget {
         BlocProvider<AttendanceCubit>(
           create: (_) => DIContainer.get<AttendanceCubit>(),
         ),
+        BlocProvider<MarksCubit>(create: (_) => DIContainer.get<MarksCubit>()),
       ],
       child: ValueListenableBuilder<bool>(
         valueListenable: isDarkMode,

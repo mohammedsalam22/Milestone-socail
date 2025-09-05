@@ -11,12 +11,31 @@ class IncidentsCubit extends Cubit<IncidentsState> {
 
   Future<void> getIncidents({int? sectionId}) async {
     if (isClosed) return;
-    
+
     emit(IncidentsLoading());
-    
+
     try {
       final incidents = await _incidentRepo.getIncidents(sectionId: sectionId);
       if (isClosed) return;
+      _allIncidents = incidents;
+      emit(IncidentsLoaded(incidents));
+    } catch (e) {
+      if (isClosed) return;
+      emit(IncidentsError(e.toString()));
+    }
+  }
+
+  Future<void> getStudentIncidents({required int studentId}) async {
+    if (isClosed) return;
+
+    emit(IncidentsLoading());
+
+    try {
+      final incidents = await _incidentRepo.getStudentIncidents(
+        studentId: studentId,
+      );
+      if (isClosed) return;
+      _allIncidents = incidents;
       emit(IncidentsLoaded(incidents));
     } catch (e) {
       if (isClosed) return;
@@ -32,7 +51,7 @@ class IncidentsCubit extends Cubit<IncidentsState> {
     required DateTime date,
   }) async {
     if (isClosed) return;
-    
+
     try {
       final incident = await _incidentRepo.createIncident(
         studentIds: studentIds,
@@ -53,7 +72,7 @@ class IncidentsCubit extends Cubit<IncidentsState> {
 
   Future<void> deleteIncident(int incidentId) async {
     if (isClosed) return;
-    
+
     try {
       await _incidentRepo.deleteIncident(incidentId);
       if (isClosed) return;

@@ -34,6 +34,31 @@ class AttendanceApi {
     }
   }
 
+  Future<List<AttendanceModel>> getStudentAttendances({
+    required int studentId,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.attendances,
+        params: {'student': studentId.toString()},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        final attendances = data
+            .map((json) => AttendanceModel.fromJson(json))
+            .toList();
+        return attendances;
+      } else {
+        throw Exception(
+          'Failed to load student attendances: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error getting student attendances: $e');
+    }
+  }
+
   Future<void> createAttendances({
     required List<AttendanceModel> attendances,
   }) async {

@@ -26,12 +26,34 @@ class RoleBasedNavigation extends StatelessWidget {
   }
 
   Widget _buildNavigationBasedOnRole() {
+    // Handle null or empty role
+    if (user.role.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                'Unable to determine user role',
+                style: TextStyle(fontSize: 18),
+              ),
+              const SizedBox(height: 8),
+              const Text('Please contact support'),
+            ],
+          ),
+        ),
+      );
+    }
+
     switch (user.role.toLowerCase()) {
       case 'admin':
       case 'teacher':
       case 'cooperator':
         return AdminNavigation(user: user);
       case 'parent':
+      case 'student':
         return ParentNavigation(user: user);
       default:
         return Scaffold(

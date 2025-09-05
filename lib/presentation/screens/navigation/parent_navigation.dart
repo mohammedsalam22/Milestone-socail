@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/model/user_model.dart';
 import '../chats_screen/chat_view.dart';
 import '../posts_screen/posts_view.dart';
-import '../profile_screen/profile_view.dart';
+import '../student_profile_screen/student_profile_view.dart';
 
 class ParentNavigation extends StatefulWidget {
   final UserModel user;
@@ -22,9 +22,9 @@ class _ParentNavigationState extends State<ParentNavigation> {
   void initState() {
     super.initState();
     _screens.addAll([
+      StudentProfileView(user: widget.user),
       PostsView(user: widget.user),
       ChatsView(user: widget.user),
-      ProfileView(user: widget.user),
     ]);
   }
 
@@ -43,9 +43,9 @@ class _ParentNavigationState extends State<ParentNavigation> {
         selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Colors.grey,
         items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           BottomNavigationBarItem(icon: Icon(Icons.article), label: 'Posts'),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chats'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

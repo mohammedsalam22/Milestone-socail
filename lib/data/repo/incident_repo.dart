@@ -14,6 +14,16 @@ class IncidentRepo {
     }
   }
 
+  Future<List<IncidentModel>> getStudentIncidents({
+    required int studentId,
+  }) async {
+    try {
+      return await _incidentApi.getStudentIncidents(studentId: studentId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<IncidentModel> createIncident({
     required List<int> studentIds,
     required String title,

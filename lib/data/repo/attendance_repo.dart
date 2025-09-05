@@ -16,6 +16,12 @@ class AttendanceRepo {
     );
   }
 
+  Future<List<AttendanceModel>> getStudentAttendances({
+    required int studentId,
+  }) async {
+    return await _attendanceApi.getStudentAttendances(studentId: studentId);
+  }
+
   Future<void> createAttendances({
     required List<AttendanceModel> attendances,
   }) async {
