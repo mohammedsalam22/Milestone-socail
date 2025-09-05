@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/model/user_model.dart';
-import '../../../data/model/chat_room_model.dart';
 import '../../../bloc/chat/chat_cubit.dart';
 import '../../../bloc/chat/chat_state.dart';
+import '../../../data/model/unified_chat_model.dart';
+import '../../../bloc/students/students_cubit.dart';
+import '../../../bloc/employees/employees_cubit.dart';
+import '../../../bloc/groups/groups_cubit.dart';
+import '../../../bloc/group_chat/group_chat_cubit.dart';
 import '../../../generated/l10n.dart';
 import '../../../core/utils/role_utils.dart';
+import '../../../di_container.dart';
 import 'chat_screen.dart';
+import 'group_chat_screen.dart';
 import 'create_group_screen.dart';
+import 'group_info_screen.dart';
 import 'widgets/chat_item.dart';
 import 'widgets/empty_chats.dart';
 
@@ -30,12 +37,14 @@ class _ChatsViewState extends State<ChatsView> {
     super.initState();
     _chatCubit = context.read<ChatCubit>();
     // Ensure we have the correct state when returning to this screen
-    if (_chatCubit.chatRooms.isNotEmpty) {
+    if (_chatCubit.unifiedChats.isNotEmpty) {
       // If we have data, restore the loaded state
       _chatCubit.restoreChatRoomsState();
     } else {
       // If no data, fetch it
-      _chatCubit.getChatRooms();
+      _chatCubit.getAllChats(
+        currentUser: widget.user.firstName + ' ' + widget.user.lastName,
+      );
     }
   }
 
@@ -43,7 +52,7 @@ class _ChatsViewState extends State<ChatsView> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // This ensures the state is correct when the widget is rebuilt
-    if (_chatCubit.chatRooms.isNotEmpty &&
+    if (_chatCubit.unifiedChats.isNotEmpty &&
         _chatCubit.state is! ChatRoomsLoaded) {
       _chatCubit.restoreChatRoomsState();
     }
@@ -122,13 +131,17 @@ class _ChatsViewState extends State<ChatsView> {
               ],
             ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(50),
+          child: _buildFilterChips(),
+        ),
       ),
       body: BlocBuilder<ChatCubit, ChatState>(
         builder: (context, state) {
-          // Get the current chat rooms (either from state or memory)
+          // Get the current unified chats (either from state or memory)
           final chatRooms = state is ChatRoomsLoaded
               ? state.filteredChatRooms
-              : _chatCubit.chatRooms;
+              : _chatCubit.unifiedChats;
 
           if (state is ChatRoomsLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -153,7 +166,10 @@ class _ChatsViewState extends State<ChatsView> {
             // Show chat rooms if we have them (regardless of state)
             return RefreshIndicator(
               onRefresh: () async {
-                _chatCubit.refreshChatRooms();
+                _chatCubit.getAllChats(
+                  currentUser:
+                      widget.user.firstName + ' ' + widget.user.lastName,
+                );
               },
               child: ListView.builder(
                 itemCount: chatRooms.length,
@@ -193,50 +209,20 @@ class _ChatsViewState extends State<ChatsView> {
     );
   }
 
-  Widget _buildChatItem(ChatRoomModel chatRoom) {
-    final chat = {
-      'id': chatRoom.id,
-      'name': chatRoom.studentName,
-      'avatar': chatRoom.studentName.isNotEmpty
-          ? chatRoom.studentName[0].toUpperCase()
-          : '?',
-      'lastMessage': chatRoom.lastMessage?.content ?? 'No messages yet',
-      'lastMessageTime': chatRoom.lastMessage != null
-          ? _formatTime(chatRoom.lastMessage!.createdAt)
-          : '',
-      'unreadCount': 0, // TODO: Implement unread count
-      'isGroup': false,
-      'members': [
-        widget.user.firstName + ' ' + widget.user.lastName,
-        chatRoom.studentName,
-      ],
-      'isMuted': false,
-      'isPinned': false,
-    };
+  Widget _buildChatItem(UnifiedChatModel unifiedChat) {
+    final chat = unifiedChat.toChatItemMap();
 
     return ChatItem(
       chat: chat,
       currentUser: widget.user,
-      onTap: () => _openChat(chatRoom),
+      onTap: () => _openChat(unifiedChat),
+      onAvatarTap: unifiedChat.isGroup
+          ? () => _openGroupInfo(unifiedChat)
+          : null,
       onTogglePin: _togglePin,
       onToggleMute: _toggleMute,
       onDelete: _deleteChat,
     );
-  }
-
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final difference = now.difference(time);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
   }
 
   Widget _buildCreateButton() {
@@ -282,27 +268,89 @@ class _ChatsViewState extends State<ChatsView> {
     );
   }
 
-  void _openChat(ChatRoomModel chatRoom) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatScreen(chatRoom: chatRoom, user: widget.user),
-      ),
-    );
+  void _openChat(UnifiedChatModel unifiedChat) {
+    if (unifiedChat.isGroup) {
+      // Navigate to group chat screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MultiBlocProvider(
+            providers: [
+              BlocProvider(
+                create: (context) => DIContainer.get<GroupChatCubit>(),
+              ),
+            ],
+            child: GroupChatScreen(
+              group: unifiedChat.groupData!,
+              user: widget.user,
+            ),
+          ),
+        ),
+      );
+    } else if (unifiedChat.chatRoomData != null) {
+      // Navigate to individual chat screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+            chatRoom: unifiedChat.chatRoomData!,
+            user: widget.user,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _openGroupInfo(UnifiedChatModel unifiedChat) {
+    if (unifiedChat.isGroup && unifiedChat.groupData != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (context) => DIContainer.get<GroupsCubit>()),
+            ],
+            child: GroupInfoScreen(
+              group: unifiedChat.groupData!,
+              currentUser: widget.user,
+            ),
+          ),
+        ),
+      ).then((groupDeleted) {
+        // If group was deleted, refresh the chat list
+        if (groupDeleted == true) {
+          _chatCubit.getAllChats(
+            currentUser: widget.user.firstName + ' ' + widget.user.lastName,
+          );
+        }
+      });
+    }
   }
 
   void _createNewGroup() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CreateGroupScreen(
-          user: widget.user,
-          onGroupCreated: (newGroup) {
-            // TODO: Implement group creation
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(S.of(context).groupCreatedSuccessfully)),
-            );
-          },
+        builder: (context) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => DIContainer.get<StudentsCubit>()),
+            BlocProvider(
+              create: (context) => DIContainer.get<EmployeesCubit>(),
+            ),
+            BlocProvider(create: (context) => DIContainer.get<GroupsCubit>()),
+          ],
+          child: CreateGroupScreen(
+            user: widget.user,
+            onGroupCreated: (newGroup) {
+              // Refresh the unified chats to show the new group
+              _chatCubit.getAllChats(
+                currentUser: widget.user.firstName + ' ' + widget.user.lastName,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(S.of(context).groupCreatedSuccessfully)),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -327,6 +375,39 @@ class _ChatsViewState extends State<ChatsView> {
       _searchController.clear();
     });
     _chatCubit.searchChatRooms(''); // Reset to show all chats
+  }
+
+  Widget _buildFilterChips() {
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          _buildFilterChip('All', ChatFilter.all),
+          const SizedBox(width: 8),
+          _buildFilterChip('Individual', ChatFilter.individual),
+          const SizedBox(width: 8),
+          _buildFilterChip('Groups', ChatFilter.groups),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, ChatFilter filter) {
+    final isSelected = _chatCubit.currentFilter == filter;
+
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          _chatCubit.setFilter(filter);
+        }
+      },
+      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      checkmarkColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: Colors.grey[200],
+    );
   }
 
   void _togglePin(int chatId) {

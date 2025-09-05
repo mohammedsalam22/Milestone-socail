@@ -9,8 +9,18 @@ class RoleUtils {
   /// Get all admin-level roles
   static List<String> get adminRoles => List.unmodifiable(_adminRoles);
 
+  /// Check if the user is a teacher
+  static bool isTeacher(String role) {
+    return role.toLowerCase() == 'teacher';
+  }
+
   /// Check if the user is a parent
   static bool isParent(String role) {
     return role.toLowerCase() == 'parent';
+  }
+
+  /// Check if the user is a student
+  static bool isStudent(String role) {
+    return role.toLowerCase() == 'student';
   }
 }

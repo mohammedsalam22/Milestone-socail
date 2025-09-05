@@ -1,46 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../data/model/user_model.dart';
+import '../../../data/model/group_model.dart';
 import '../../../data/model/student_model.dart';
 import '../../../data/model/employee_model.dart';
-import '../../../data/model/group_model.dart';
+import '../../../data/model/user_model.dart';
 import '../../../bloc/students/students_cubit.dart';
+import '../../../bloc/students/students_state.dart';
 import '../../../bloc/employees/employees_cubit.dart';
+import '../../../bloc/employees/employees_state.dart';
 import '../../../bloc/groups/groups_cubit.dart';
 import '../../../bloc/groups/groups_state.dart';
 import 'widgets/student_picker.dart';
 import 'widgets/employee_picker.dart';
 
-class CreateGroupScreen extends StatefulWidget {
-  final UserModel user;
-  final Function(Map<String, dynamic>) onGroupCreated;
+class EditGroupScreen extends StatefulWidget {
+  final GroupModel group;
+  final UserModel currentUser;
+  final Function(GroupModel) onGroupUpdated;
 
-  const CreateGroupScreen({
+  const EditGroupScreen({
     super.key,
-    required this.user,
-    required this.onGroupCreated,
+    required this.group,
+    required this.currentUser,
+    required this.onGroupUpdated,
   });
 
   @override
-  State<CreateGroupScreen> createState() => _CreateGroupScreenState();
+  State<EditGroupScreen> createState() => _EditGroupScreenState();
 }
 
-class _CreateGroupScreenState extends State<CreateGroupScreen>
+class _EditGroupScreenState extends State<EditGroupScreen>
     with TickerProviderStateMixin {
   final TextEditingController _groupNameController = TextEditingController();
   late TabController _tabController;
 
   List<StudentModel> _selectedStudents = [];
   List<EmployeeModel> _selectedEmployees = [];
+  List<StudentModel> _allStudents = [];
+  List<EmployeeModel> _allEmployees = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    // Load data
-    context.read<StudentsCubit>().getAllStudents();
-    context.read<EmployeesCubit>().getEmployees();
+    // Initialize with current group data
+    _groupNameController.text = widget.group.name;
+
+    // Load data first, then match existing members
+    _loadDataAndMatchMembers();
   }
 
   @override
@@ -50,11 +59,95 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
     super.dispose();
   }
 
+  void _loadDataAndMatchMembers() {
+    // Load students and employees
+    context.read<StudentsCubit>().getAllStudents();
+    context.read<EmployeesCubit>().getEmployees();
+  }
+
+  void _matchMembersIfDataLoaded() {
+    final studentsState = context.read<StudentsCubit>().state;
+    final employeesState = context.read<EmployeesCubit>().state;
+
+    if (studentsState is StudentsLoaded && employeesState is EmployeesLoaded) {
+      _allStudents = studentsState.students;
+      _allEmployees = employeesState.employees;
+
+      // Match existing group members with loaded data
+      _selectedStudents = _matchStudentsWithGroupMembers();
+      _selectedEmployees = _matchEmployeesWithGroupMembers();
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  List<StudentModel> _matchStudentsWithGroupMembers() {
+    final List<StudentModel> matchedStudents = [];
+
+    for (final groupMember in widget.group.students) {
+      final student = _allStudents.firstWhere(
+        (s) => s.id == groupMember.id,
+        orElse: () => StudentModel(
+          id: groupMember.id,
+          fullName: groupMember.name,
+          sectionId: 0,
+          sectionName: '',
+          gradeName: '',
+          studyStageName: '',
+          studyYearName: '',
+        ),
+      );
+      matchedStudents.add(student);
+    }
+
+    return matchedStudents;
+  }
+
+  List<EmployeeModel> _matchEmployeesWithGroupMembers() {
+    final List<EmployeeModel> matchedEmployees = [];
+
+    for (final groupMember in widget.group.employees) {
+      final employee = _allEmployees.firstWhere(
+        (e) => e.id == groupMember.id,
+        orElse: () => EmployeeModel(
+          id: groupMember.id,
+          username: '',
+          phone: '',
+          firstName: groupMember.name.split(' ').first,
+          lastName: groupMember.name.split(' ').length > 1
+              ? groupMember.name.split(' ').skip(1).join(' ')
+              : '',
+          role: groupMember.role ?? '',
+          fatherName: '',
+          motherName: '',
+          nationality: '',
+          gender: '',
+          address: '',
+          birthDate: '',
+          familyStatus: '',
+          nationalNo: '',
+          salary: '',
+          contractStart: '',
+          contractEnd: '',
+          dayStart: '',
+          dayEnd: '',
+        ),
+      );
+      matchedEmployees.add(employee);
+    }
+
+    return matchedEmployees;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Group'),
+        title: const Text('Edit Group'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
@@ -85,67 +178,71 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
         ),
       ),
       backgroundColor: Colors.grey[50],
-      body: BlocListener<GroupsCubit, GroupsState>(
-        listener: (context, state) {
-          if (state is GroupCreated) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Group created successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            widget.onGroupCreated({
-              'id': state.group.id,
-              'name': state.group.name,
-              'avatar': state.group.name.substring(0, 1).toUpperCase(),
-              'lastMessage': 'Group created!',
-              'lastMessageTime': 'Now',
-              'unreadCount': 0,
-              'isGroup': true,
-              'members': state.group.allMembers.map((m) => m.name).toList(),
-              'isMuted': false,
-              'isPinned': false,
-            });
-            Navigator.pop(context);
-          } else if (state is GroupCreateError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error creating group: ${state.message}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: Column(
-          children: [
-            _buildGroupNameField(),
-            _buildSelectedMembersChips(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<GroupsCubit, GroupsState>(
+            listener: (context, state) {
+              if (state is GroupCreated) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Group updated successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                widget.onGroupUpdated(state.group);
+              } else if (state is GroupCreateError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error updating group: ${state.message}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
+          BlocListener<StudentsCubit, StudentsState>(
+            listener: (context, state) {
+              _matchMembersIfDataLoaded();
+            },
+          ),
+          BlocListener<EmployeesCubit, EmployeesState>(
+            listener: (context, state) {
+              _matchMembersIfDataLoaded();
+            },
+          ),
+        ],
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
                 children: [
-                  StudentPicker(
-                    selectedStudents: _selectedStudents,
-                    onSelectionChanged: (students) {
-                      setState(() {
-                        _selectedStudents = students;
-                      });
-                    },
+                  _buildGroupNameField(),
+                  _buildSelectedMembersChips(),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        StudentPicker(
+                          selectedStudents: _selectedStudents,
+                          onSelectionChanged: (students) {
+                            setState(() {
+                              _selectedStudents = students;
+                            });
+                          },
+                        ),
+                        EmployeePicker(
+                          selectedEmployees: _selectedEmployees,
+                          onSelectionChanged: (employees) {
+                            setState(() {
+                              _selectedEmployees = employees;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  EmployeePicker(
-                    selectedEmployees: _selectedEmployees,
-                    onSelectionChanged: (employees) {
-                      setState(() {
-                        _selectedEmployees = employees;
-                      });
-                    },
-                  ),
+                  _buildUpdateButton(),
                 ],
               ),
-            ),
-            _buildCreateButton(),
-          ],
-        ),
       ),
     );
   }
@@ -266,9 +363,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
     );
   }
 
-  Widget _buildCreateButton() {
+  Widget _buildUpdateButton() {
     final totalMembers = _selectedStudents.length + _selectedEmployees.length;
-    final canCreate =
+    final canUpdate =
         _groupNameController.text.trim().isNotEmpty && totalMembers > 0;
 
     return BlocBuilder<GroupsCubit, GroupsState>(
@@ -280,7 +377,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: canCreate && !isLoading ? _createGroup : null,
+              onPressed: canUpdate && !isLoading ? _updateGroup : null,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -297,7 +394,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
                       ),
                     )
                   : Text(
-                      'Create Group${totalMembers > 0 ? ' ($totalMembers members)' : ''}',
+                      'Update Group${totalMembers > 0 ? ' ($totalMembers members)' : ''}',
                       style: const TextStyle(fontSize: 16),
                     ),
             ),
@@ -307,7 +404,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
     );
   }
 
-  void _createGroup() {
+  void _updateGroup() {
     final groupName = _groupNameController.text.trim();
     if (groupName.isEmpty) return;
 
@@ -317,7 +414,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
       employeeIds: _selectedEmployees.map((e) => e.id).toList(),
     );
 
-    context.read<GroupsCubit>().createGroup(request);
+    context.read<GroupsCubit>().updateGroup(widget.group.id, request);
   }
 
   void _removeStudent(StudentModel student) {

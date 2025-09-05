@@ -8,6 +8,9 @@ import 'bloc/sections/sections_cubit.dart';
 import 'bloc/chat/chat_cubit.dart';
 import 'bloc/incidents/incidents_cubit.dart';
 import 'bloc/students/students_cubit.dart';
+import 'bloc/employees/employees_cubit.dart';
+import 'bloc/groups/groups_cubit.dart';
+import 'bloc/group_chat/group_chat_cubit.dart';
 import 'bloc/attendance/attendance_cubit.dart';
 import 'bloc/marks/marks_cubit.dart';
 import 'bloc/schedule/schedule_cubit.dart';
@@ -18,6 +21,9 @@ import 'data/api/section_api.dart';
 import 'data/api/chat_api.dart';
 import 'data/api/incident_api.dart';
 import 'data/api/student_api.dart';
+import 'data/api/employee_api.dart';
+import 'data/api/group_api.dart';
+import 'data/api/group_chat_api.dart';
 import 'data/api/attendance_api.dart';
 import 'data/api/mark_api.dart';
 import 'data/api/schedule_api.dart';
@@ -27,6 +33,9 @@ import 'data/repo/section_repo.dart';
 import 'data/repo/chat_repo.dart';
 import 'data/repo/incident_repo.dart';
 import 'data/repo/student_repo.dart';
+import 'data/repo/employee_repo.dart';
+import 'data/repo/group_repo.dart';
+import 'data/repo/group_chat_repo.dart';
 import 'data/repo/attendance_repo.dart';
 import 'data/repo/mark_repo.dart';
 import 'data/repo/schedule_repo.dart';
@@ -58,6 +67,15 @@ class DIContainer {
     _getIt.registerLazySingleton<StudentApi>(
       () => StudentApi(_getIt<ApiService>()),
     );
+    _getIt.registerLazySingleton<EmployeeApi>(
+      () => EmployeeApi(_getIt<ApiService>()),
+    );
+    _getIt.registerLazySingleton<GroupApi>(
+      () => GroupApi(_getIt<ApiService>()),
+    );
+    _getIt.registerLazySingleton<GroupChatApi>(
+      () => GroupChatApi(_getIt<ApiService>()),
+    );
     _getIt.registerLazySingleton<AttendanceApi>(
       () => AttendanceApi(_getIt<ApiService>()),
     );
@@ -81,6 +99,15 @@ class DIContainer {
     _getIt.registerLazySingleton<StudentRepo>(
       () => StudentRepo(_getIt<StudentApi>()),
     );
+    _getIt.registerLazySingleton<EmployeeRepo>(
+      () => EmployeeRepo(_getIt<EmployeeApi>()),
+    );
+    _getIt.registerLazySingleton<GroupRepo>(
+      () => GroupRepo(_getIt<GroupApi>()),
+    );
+    _getIt.registerLazySingleton<GroupChatRepo>(
+      () => GroupChatRepo(_getIt<GroupChatApi>()),
+    );
     _getIt.registerLazySingleton<AttendanceRepo>(
       () => AttendanceRepo(_getIt<AttendanceApi>()),
     );
@@ -96,13 +123,20 @@ class DIContainer {
       () => SectionsCubit(_getIt<SectionRepo>()),
     );
     _getIt.registerLazySingleton<ChatCubit>(
-      () => ChatCubit(_getIt<ChatRepo>()),
+      () => ChatCubit(_getIt<ChatRepo>(), _getIt<GroupRepo>()),
     );
     _getIt.registerFactory<IncidentsCubit>(
       () => IncidentsCubit(_getIt<IncidentRepo>()),
     );
     _getIt.registerFactory<StudentsCubit>(
       () => StudentsCubit(_getIt<StudentRepo>()),
+    );
+    _getIt.registerFactory<EmployeesCubit>(
+      () => EmployeesCubit(_getIt<EmployeeRepo>()),
+    );
+    _getIt.registerFactory<GroupsCubit>(() => GroupsCubit(_getIt<GroupRepo>()));
+    _getIt.registerFactory<GroupChatCubit>(
+      () => GroupChatCubit(_getIt<GroupChatApi>()),
     );
     _getIt.registerFactory<AttendanceCubit>(
       () => AttendanceCubit(_getIt<AttendanceRepo>()),

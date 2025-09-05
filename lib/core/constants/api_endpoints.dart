@@ -14,14 +14,22 @@ class ApiEndpoints {
   static const String attendances = '/api/school/attendances/';
   static const String marks = '/api/school/marks/';
   static const String schedules = '/api/school/schedules';
+  static const String employees = '/api/users/employees';
+  static const String groupRooms = '/api/chat/group-rooms';
+  static const String groupMessages = '/api/chat/group-messages';
 
   // WebSocket Endpoints
   static const String chatWebSocket = '/ws/chat';
+  static const String groupChatWebSocket = '/ws/group-chat';
   static const String postsWebSocket = '/ws/posts';
 
   // Helper methods for WebSocket URLs
   static String getChatWebSocketUrl(int roomId, String token) {
     return '$wsBaseUrl$chatWebSocket/$roomId/?token=$token';
+  }
+
+  static String getGroupChatWebSocketUrl(int groupId, String token) {
+    return '$wsBaseUrl$groupChatWebSocket/$groupId/?token=$token';
   }
 
   static String getPostsWebSocketUrl(String token) {

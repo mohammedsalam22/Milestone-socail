@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../data/model/chat_room_model.dart';
+import '../../data/model/unified_chat_model.dart';
 import '../../data/model/message_model.dart';
 
 abstract class ChatState extends Equatable {
@@ -14,11 +14,13 @@ class ChatInitial extends ChatState {}
 class ChatRoomsLoading extends ChatState {}
 
 class ChatRoomsLoaded extends ChatState {
-  final List<ChatRoomModel> chatRooms;
-  final List<ChatRoomModel> filteredChatRooms;
+  final List<UnifiedChatModel> chatRooms;
+  final List<UnifiedChatModel> filteredChatRooms;
 
-  const ChatRoomsLoaded(this.chatRooms, {List<ChatRoomModel>? filteredChatRooms})
-      : filteredChatRooms = filteredChatRooms ?? chatRooms;
+  const ChatRoomsLoaded(
+    this.chatRooms, {
+    List<UnifiedChatModel>? filteredChatRooms,
+  }) : filteredChatRooms = filteredChatRooms ?? chatRooms;
 
   @override
   List<Object?> get props => [chatRooms, filteredChatRooms];
@@ -69,4 +71,4 @@ class MessageReceived extends ChatState {
 
   @override
   List<Object?> get props => [message];
-} 
+}

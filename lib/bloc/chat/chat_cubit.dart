@@ -1,32 +1,111 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/repo/chat_repo.dart';
+import '../../data/repo/group_repo.dart';
 import '../../data/model/chat_room_model.dart';
+import '../../data/model/group_model.dart';
+import '../../data/model/unified_chat_model.dart';
 import '../../data/model/message_model.dart';
 import '../../data/services/chat_websocket_service.dart';
 import 'chat_state.dart';
 
+enum ChatFilter { all, individual, groups }
+
 class ChatCubit extends Cubit<ChatState> {
   final ChatRepo _chatRepo;
+  final GroupRepo _groupRepo;
   ChatWebSocketService? _webSocketService;
   Stream<MessageModel>? _wsStream;
   List<MessageModel> _allMessages = [];
   List<ChatRoomModel> _allChatRooms = [];
+  List<GroupModel> _allGroups = [];
+  List<UnifiedChatModel> _allUnifiedChats = [];
+  ChatFilter _currentFilter = ChatFilter.all;
+  String _currentUser = '';
 
-  ChatCubit(this._chatRepo) : super(ChatInitial());
+  ChatCubit(this._chatRepo, this._groupRepo) : super(ChatInitial());
 
-  // Chat Rooms Methods
-  Future<void> getChatRooms() async {
+  // Unified Chat Methods
+  Future<void> getAllChats({String? currentUser}) async {
     try {
-      // Only show loading if we don't have any chat rooms
-      if (_allChatRooms.isEmpty) {
+      if (currentUser != null) {
+        _currentUser = currentUser;
+      }
+
+      // Only show loading if we don't have any data
+      if (_allUnifiedChats.isEmpty) {
         emit(ChatRoomsLoading());
       }
+
+      // Fetch both individual chats and groups
       final chatRooms = await _chatRepo.getChatRooms();
+      final groups = await _groupRepo.getGroups();
+
       _allChatRooms = chatRooms;
-      emit(ChatRoomsLoaded(_allChatRooms));
+      _allGroups = groups;
+
+      // Create unified chat list
+      _allUnifiedChats = _createUnifiedChatList();
+
+      emit(ChatRoomsLoaded(_allUnifiedChats));
     } catch (e) {
       emit(ChatRoomsError(e.toString()));
     }
+  }
+
+  // Legacy method for backward compatibility
+  Future<void> getChatRooms() async {
+    await getAllChats();
+  }
+
+  // Create unified chat list from individual chats and groups
+  List<UnifiedChatModel> _createUnifiedChatList() {
+    final List<UnifiedChatModel> unifiedChats = [];
+
+    // Add individual chats
+    for (final chatRoom in _allChatRooms) {
+      unifiedChats.add(UnifiedChatModel.fromChatRoom(chatRoom, _currentUser));
+    }
+
+    // Add groups
+    for (final group in _allGroups) {
+      unifiedChats.add(UnifiedChatModel.fromGroup(group));
+    }
+
+    // Sort by last message time (most recent first)
+    unifiedChats.sort((a, b) {
+      if (a.lastMessageTime == null && b.lastMessageTime == null) return 0;
+      if (a.lastMessageTime == null) return 1;
+      if (b.lastMessageTime == null) return -1;
+      return b.lastMessageTime!.compareTo(a.lastMessageTime!);
+    });
+
+    return unifiedChats;
+  }
+
+  // Filter methods
+  void setFilter(ChatFilter filter) {
+    _currentFilter = filter;
+    _applyFilter();
+  }
+
+  void _applyFilter() {
+    List<UnifiedChatModel> filteredChats = _allUnifiedChats;
+
+    switch (_currentFilter) {
+      case ChatFilter.individual:
+        filteredChats = _allUnifiedChats
+            .where((chat) => chat.isIndividualChat)
+            .toList();
+        break;
+      case ChatFilter.groups:
+        filteredChats = _allUnifiedChats.where((chat) => chat.isGroup).toList();
+        break;
+      case ChatFilter.all:
+        filteredChats = _allUnifiedChats;
+        break;
+    }
+
+    emit(ChatRoomsLoaded(_allUnifiedChats, filteredChatRooms: filteredChats));
   }
 
   // Messages Methods
@@ -92,9 +171,9 @@ class ChatCubit extends Cubit<ChatState> {
     _webSocketService?.disconnect();
     // Clear messages when disconnecting to prevent state conflicts
     _allMessages.clear();
-    // Emit the current chat rooms state to ensure UI updates properly
-    if (_allChatRooms.isNotEmpty) {
-      emit(ChatRoomsLoaded(_allChatRooms));
+    // Emit the current unified chats state to ensure UI updates properly
+    if (_allUnifiedChats.isNotEmpty) {
+      _applyFilter();
     }
   }
 
@@ -111,39 +190,48 @@ class ChatCubit extends Cubit<ChatState> {
     }
   }
 
-  void refreshChatRooms() {
-    getChatRooms();
-  }
-
   void refreshMessages(int roomId) {
     getMessages(roomId);
   }
 
   void clearChatRooms() {
     _allChatRooms.clear();
+    _allGroups.clear();
+    _allUnifiedChats.clear();
     emit(ChatInitial());
-  }
-
-  void restoreChatRoomsState() {
-    if (_allChatRooms.isNotEmpty) {
-      emit(ChatRoomsLoaded(_allChatRooms));
-    }
   }
 
   void searchChatRooms(String query) {
     if (query.trim().isEmpty) {
-      // If search is empty, show all chat rooms
-      emit(ChatRoomsLoaded(_allChatRooms));
+      // If search is empty, apply current filter
+      _applyFilter();
     } else {
-      // Filter chat rooms by student name
-      final filteredRooms = _allChatRooms.where((room) {
-        return room.studentName.toLowerCase().contains(query.toLowerCase());
+      // Filter unified chats by name or members
+      final filteredChats = _allUnifiedChats.where((chat) {
+        return chat.name.toLowerCase().contains(query.toLowerCase()) ||
+            chat.members.any(
+              (member) => member.toLowerCase().contains(query.toLowerCase()),
+            );
       }).toList();
-      
-      emit(ChatRoomsLoaded(_allChatRooms, filteredChatRooms: filteredRooms));
+
+      emit(ChatRoomsLoaded(_allUnifiedChats, filteredChatRooms: filteredChats));
     }
   }
 
+  void refreshChatRooms() {
+    getAllChats();
+  }
+
+  void restoreChatRoomsState() {
+    if (_allUnifiedChats.isNotEmpty) {
+      _applyFilter();
+    }
+  }
+
+  // Getters
   List<ChatRoomModel> get chatRooms => _allChatRooms;
+  List<GroupModel> get groups => _allGroups;
+  List<UnifiedChatModel> get unifiedChats => _allUnifiedChats;
   List<MessageModel> get messages => _allMessages;
+  ChatFilter get currentFilter => _currentFilter;
 }

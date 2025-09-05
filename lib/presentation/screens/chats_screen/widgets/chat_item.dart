@@ -7,6 +7,7 @@ class ChatItem extends StatelessWidget {
   final Map<String, dynamic> chat;
   final UserModel currentUser;
   final VoidCallback onTap;
+  final VoidCallback? onAvatarTap;
   final Function(int) onTogglePin;
   final Function(int) onToggleMute;
   final Function(int) onDelete;
@@ -16,6 +17,7 @@ class ChatItem extends StatelessWidget {
     required this.chat,
     required this.currentUser,
     required this.onTap,
+    this.onAvatarTap,
     required this.onTogglePin,
     required this.onToggleMute,
     required this.onDelete,
@@ -104,34 +106,37 @@ class ChatItem extends StatelessWidget {
   }
 
   Widget _buildAvatar() {
-    return Stack(
-      children: [
-        CircleAvatar(
-          radius: 25,
-          backgroundColor: _getChatColor(),
-          child: Text(
-            chat['avatar'],
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ),
-        if (chat['isGroup'])
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: chat['isGroup'] && onAvatarTap != null ? onAvatarTap : null,
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: _getChatColor(),
+            child: Text(
+              chat['avatar'],
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
-              child: const Icon(Icons.group, color: Colors.white, size: 12),
             ),
           ),
-      ],
+          if (chat['isGroup'])
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.group, color: Colors.white, size: 12),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -156,39 +161,75 @@ class ChatItem extends StatelessWidget {
   }
 
   Widget _buildSubtitle() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (chat['isMuted'])
-          const Icon(Icons.volume_off, size: 14, color: Colors.grey),
-        if (chat['isMuted']) const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            chat['lastMessage'],
-            style: TextStyle(color: Colors.grey[600]!, fontSize: 14),
+        // Show members for groups
+        if (chat['isGroup'] && chat['members'] != null) ...[
+          Text(
+            _formatMembersList(chat['members']),
+            style: TextStyle(
+              color: Colors.grey[500]!,
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-        ),
-        if (chat['unreadCount'] > 0) ...[
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: const BoxDecoration(
-              color: Colors.green,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '${chat['unreadCount']}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+          const SizedBox(height: 2),
+        ],
+        // Show last message or mute indicator
+        Row(
+          children: [
+            if (chat['isMuted'])
+              const Icon(Icons.volume_off, size: 14, color: Colors.grey),
+            if (chat['isMuted']) const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                chat['lastMessage'],
+                style: TextStyle(color: Colors.grey[600]!, fontSize: 14),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
-        ],
+            if (chat['unreadCount'] > 0) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '${chat['unreadCount']}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ],
     );
+  }
+
+  String _formatMembersList(List<dynamic> members) {
+    if (members.isEmpty) return 'No members';
+
+    // Limit to first 3 members to avoid overflow
+    final displayMembers = members.take(3).toList();
+    final memberNames = displayMembers
+        .map((member) => member.toString())
+        .join(', ');
+
+    if (members.length > 3) {
+      return '$memberNames +${members.length - 3} more';
+    }
+
+    return memberNames;
   }
 
   Color _getChatColor() {
