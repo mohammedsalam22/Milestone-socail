@@ -36,7 +36,7 @@ class ApiService {
           final prefs = await SharedPreferences.getInstance();
           final token = prefs.getString('auth_token');
           if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
+            options.headers['Authorization'] = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU3NTQ1MzM1LCJpYXQiOjE3NTcxMTMzMzUsImp0aSI6ImM4MTE5MTVlMzZhNDQyNTE4N2ZkY2FlOWY0NGI0Y2IzIiwidXNlcl9pZCI6Mn0.A9l9kBGyKDiZQsAxg7gKQe4DyUTc5bF-m3e4rLNmDFs';
           }
 
           // print('Request Path: ${options.path}');

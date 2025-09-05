@@ -37,6 +37,28 @@ class ScheduleCubit extends Cubit<ScheduleState> {
     }
   }
 
+  Future<void> getTeacherSchedule({required int teacherId}) async {
+    try {
+      emit(ScheduleLoading());
+
+      final schedules = await _scheduleRepository.getTeacherSchedule(
+        teacherId: teacherId,
+      );
+
+      // Group schedules by day and sort them
+      final groupedSchedules = _groupSchedulesByDay(schedules);
+
+      // Create teacher info
+      const String teacherInfo = 'Teacher Schedule';
+
+      emit(
+        ScheduleLoaded(schedules: groupedSchedules, sectionInfo: teacherInfo),
+      );
+    } catch (e) {
+      emit(ScheduleError(message: e.toString()));
+    }
+  }
+
   List<ScheduleModel> _groupSchedulesByDay(List<ScheduleModel> schedules) {
     // Sort schedules by day and time
     final dayOrder = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];

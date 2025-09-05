@@ -16,4 +16,14 @@ class ScheduleRepository {
       rethrow;
     }
   }
+
+  Future<List<ScheduleModel>> getTeacherSchedule({
+    required int teacherId,
+  }) async {
+    try {
+      return await _scheduleApi.getTeacherSchedule(teacherId: teacherId);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

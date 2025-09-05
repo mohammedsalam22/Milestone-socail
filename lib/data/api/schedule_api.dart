@@ -31,4 +31,29 @@ class ScheduleApi {
       throw Exception('Error getting student schedule: $e');
     }
   }
+
+  Future<List<ScheduleModel>> getTeacherSchedule({
+    required int teacherId,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.schedules,
+        params: {'teacher': teacherId.toString()},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        final schedules = data
+            .map((json) => ScheduleModel.fromJson(json))
+            .toList();
+        return schedules;
+      } else {
+        throw Exception(
+          'Failed to load teacher schedule: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error getting teacher schedule: $e');
+    }
+  }
 }

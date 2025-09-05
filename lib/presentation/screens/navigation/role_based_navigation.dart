@@ -5,6 +5,8 @@ import '../../../bloc/login/login_state.dart';
 import '../../../data/model/user_model.dart';
 import 'admin_navigation.dart';
 import 'parent_navigation.dart';
+import 'teacher_navigation.dart';
+import 'receptionist_navigation.dart';
 
 class RoleBasedNavigation extends StatelessWidget {
   final UserModel user;
@@ -49,9 +51,12 @@ class RoleBasedNavigation extends StatelessWidget {
 
     switch (user.role.toLowerCase()) {
       case 'admin':
-      case 'teacher':
       case 'cooperator':
         return AdminNavigation(user: user);
+      case 'teacher':
+        return TeacherNavigation(user: user);
+      case 'receptionist':
+        return ReceptionistNavigation(user: user);
       case 'parent':
       case 'student':
         return ParentNavigation(user: user);
