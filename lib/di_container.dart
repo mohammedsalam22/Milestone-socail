@@ -10,6 +10,7 @@ import 'bloc/incidents/incidents_cubit.dart';
 import 'bloc/students/students_cubit.dart';
 import 'bloc/attendance/attendance_cubit.dart';
 import 'bloc/marks/marks_cubit.dart';
+import 'bloc/schedule/schedule_cubit.dart';
 import 'core/servcies/api_service.dart';
 import 'data/api/login_api.dart';
 import 'data/api/post_api.dart';
@@ -19,6 +20,7 @@ import 'data/api/incident_api.dart';
 import 'data/api/student_api.dart';
 import 'data/api/attendance_api.dart';
 import 'data/api/mark_api.dart';
+import 'data/api/schedule_api.dart';
 import 'data/repo/login_repo.dart';
 import 'data/repo/post_repo.dart';
 import 'data/repo/section_repo.dart';
@@ -27,6 +29,7 @@ import 'data/repo/incident_repo.dart';
 import 'data/repo/student_repo.dart';
 import 'data/repo/attendance_repo.dart';
 import 'data/repo/mark_repo.dart';
+import 'data/repo/schedule_repo.dart';
 
 class DIContainer {
   static final GetIt _getIt = GetIt.instance;
@@ -59,6 +62,9 @@ class DIContainer {
       () => AttendanceApi(_getIt<ApiService>()),
     );
     _getIt.registerLazySingleton<MarkApi>(() => MarkApi(_getIt<ApiService>()));
+    _getIt.registerLazySingleton<ScheduleApi>(
+      () => ScheduleApi(_getIt<ApiService>()),
+    );
 
     // Repositories
     _getIt.registerLazySingleton<LoginRepo>(
@@ -79,6 +85,9 @@ class DIContainer {
       () => AttendanceRepo(_getIt<AttendanceApi>()),
     );
     _getIt.registerLazySingleton<MarkRepo>(() => MarkRepo(_getIt<MarkApi>()));
+    _getIt.registerLazySingleton<ScheduleRepository>(
+      () => ScheduleRepository(scheduleApi: _getIt<ScheduleApi>()),
+    );
 
     // Cubits
     _getIt.registerFactory<LoginCubit>(() => LoginCubit(_getIt<LoginRepo>()));
@@ -99,6 +108,9 @@ class DIContainer {
       () => AttendanceCubit(_getIt<AttendanceRepo>()),
     );
     _getIt.registerFactory<MarksCubit>(() => MarksCubit(_getIt<MarkRepo>()));
+    _getIt.registerFactory<ScheduleCubit>(
+      () => ScheduleCubit(scheduleRepository: _getIt<ScheduleRepository>()),
+    );
   }
 
   // Getter methods

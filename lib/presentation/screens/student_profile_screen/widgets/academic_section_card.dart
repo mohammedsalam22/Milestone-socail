@@ -3,6 +3,7 @@ import '../../../../data/model/user_model.dart';
 import '../../attendance_screen/widgets/student_attendance_view.dart';
 import '../../incidents_screen/widgets/student_incidents_view.dart';
 import '../../marks_screen/widgets/student_marks_view.dart';
+import '../../schedule_screen/widgets/student_schedule_view.dart';
 
 class AcademicSectionCard extends StatelessWidget {
   final UserModel user;
@@ -195,12 +196,9 @@ class AcademicSectionCard extends StatelessWidget {
   }
 
   void _navigateToSchedule(BuildContext context) {
-    // TODO: Navigate to student schedule view
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Schedule feature coming soon!'),
-        backgroundColor: Colors.purple,
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => StudentScheduleView(user: user)),
     );
   }
 }
