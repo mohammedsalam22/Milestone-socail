@@ -10,6 +10,9 @@ class PostsCubit extends Cubit<PostsState> {
   PostsWebSocketService? _webSocketService;
   Stream<PostModel>? _wsStream;
   List<PostModel> _allPosts = [];
+  List<PostModel> _publicPosts = [];
+  List<PostModel> _privatePosts = [];
+  bool _isPublicChannel = true;
 
   PostsCubit(this._postRepo) : super(PostsInitial());
 
@@ -17,12 +20,36 @@ class PostsCubit extends Cubit<PostsState> {
     try {
       emit(PostsLoading());
       final posts = await _postRepo.getPosts();
+      _publicPosts = posts;
       _allPosts = _mergeAndDeduplicate(_allPosts, posts);
-      emit(PostsLoaded(_allPosts));
+      emit(PostsLoaded(_isPublicChannel ? _publicPosts : _privatePosts));
     } catch (e) {
       emit(PostsError(e.toString()));
     }
   }
+
+  Future<void> getPostsBySection(int sectionId) async {
+    try {
+      emit(PostsLoading());
+      final posts = await _postRepo.getPostsBySection(sectionId);
+      _privatePosts = posts;
+      emit(PostsLoaded(_isPublicChannel ? _publicPosts : _privatePosts));
+    } catch (e) {
+      emit(PostsError(e.toString()));
+    }
+  }
+
+  void switchToPublicChannel() {
+    _isPublicChannel = true;
+    emit(PostsLoaded(_publicPosts));
+  }
+
+  void switchToPrivateChannel() {
+    _isPublicChannel = false;
+    emit(PostsLoaded(_privatePosts));
+  }
+
+  bool get isPublicChannel => _isPublicChannel;
 
   Future<void> createPost({
     required String title,
@@ -79,6 +106,20 @@ class PostsCubit extends Cubit<PostsState> {
   void disconnectWebSocket() {
     _webSocketService?.disconnect();
     // Do not clear _allPosts so old posts remain visible
+  }
+
+  Future<void> editPost({required int postId, required String text}) async {
+    try {
+      final editedPost = await _postRepo.editPost(postId: postId, text: text);
+
+      // Update the post in all lists
+      _updatePostInLists(editedPost);
+
+      emit(PostEdited(editedPost));
+      emit(PostsLoaded(_isPublicChannel ? _publicPosts : _privatePosts));
+    } catch (e) {
+      emit(PostsError(e.toString()));
+    }
   }
 
   Future<void> deletePost(int postId) async {
@@ -141,6 +182,26 @@ class PostsCubit extends Cubit<PostsState> {
 
   void refreshPosts() {
     getPosts();
+  }
+
+  void _updatePostInLists(PostModel editedPost) {
+    // Update in _allPosts
+    final allIndex = _allPosts.indexWhere((p) => p.id == editedPost.id);
+    if (allIndex != -1) {
+      _allPosts[allIndex] = editedPost;
+    }
+
+    // Update in _publicPosts
+    final publicIndex = _publicPosts.indexWhere((p) => p.id == editedPost.id);
+    if (publicIndex != -1) {
+      _publicPosts[publicIndex] = editedPost;
+    }
+
+    // Update in _privatePosts
+    final privateIndex = _privatePosts.indexWhere((p) => p.id == editedPost.id);
+    if (privateIndex != -1) {
+      _privatePosts[privateIndex] = editedPost;
+    }
   }
 
   List<PostModel> _mergeAndDeduplicate(

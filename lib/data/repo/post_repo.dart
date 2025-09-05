@@ -15,6 +15,14 @@ class PostRepo {
     }
   }
 
+  Future<List<PostModel>> getPostsBySection(int sectionId) async {
+    try {
+      return await _postApi.getPostsBySection(sectionId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<PostModel> createPost({
     required String title,
     required String text,
@@ -35,6 +43,17 @@ class PostRepo {
     }
   }
 
+  Future<PostModel> editPost({
+    required int postId,
+    required String text,
+  }) async {
+    try {
+      return await _postApi.editPost(postId: postId, text: text);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> deletePost(int postId) async {
     try {
       await _postApi.deletePost(postId);
@@ -43,28 +62,18 @@ class PostRepo {
     }
   }
 
-  Future<bool> addComment({
-    required int postId,
-    required String text,
-  }) async {
+  Future<bool> addComment({required int postId, required String text}) async {
     try {
-      final response = await _postApi.addComment(
-        postId: postId,
-        text: text,
-      );
+      final response = await _postApi.addComment(postId: postId, text: text);
       return response.statusCode == 201;
     } catch (e) {
       return false;
     }
   }
 
-  Future<bool> deleteComment({
-    required int commentId,
-  }) async {
+  Future<bool> deleteComment({required int commentId}) async {
     try {
-      final response = await _postApi.deleteComment(
-        commentId: commentId,
-      );
+      final response = await _postApi.deleteComment(commentId: commentId);
       return response.statusCode == 204;
     } catch (e) {
       return false;

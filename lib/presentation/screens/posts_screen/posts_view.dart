@@ -8,6 +8,7 @@ import '../../../bloc/posts/posts_state.dart';
 import '../comment_screen/comment_view.dart';
 import 'widgets/post_card.dart';
 import 'widgets/create_post_bottom_sheet.dart';
+import 'widgets/edit_post_bottom_sheet.dart';
 import 'widgets/files_bottom_sheet.dart';
 import '../../../generated/l10n.dart';
 import '../../../core/utils/role_utils.dart';
@@ -23,16 +24,19 @@ class PostsView extends StatefulWidget {
   State<PostsView> createState() => _PostsViewState();
 }
 
-class _PostsViewState extends State<PostsView> {
+class _PostsViewState extends State<PostsView> with TickerProviderStateMixin {
   late final PostsCubit _postsCubit;
   final ScrollController _scrollController = ScrollController();
   bool _showNewPostsBanner = false;
   final List<PostModel> _pendingNewPosts = [];
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     _postsCubit = context.read<PostsCubit>();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
     _initWebSocketAndPosts();
     _scrollController.addListener(_onScroll);
   }
@@ -41,14 +45,36 @@ class _PostsViewState extends State<PostsView> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ?? '';
     _postsCubit.connectWebSocket(token, onNewPost: _handleNewPost);
-    _postsCubit.getPosts();
+
+    if (_isParent) {
+      // Load both public and private posts for parents
+      await _postsCubit.getPosts(); // Load public posts
+      final sectionId = await UserModel.getSectionId();
+      if (sectionId > 0) {
+        await _postsCubit.getPostsBySection(sectionId); // Load private posts
+      }
+    } else {
+      // Load only public posts for admins
+      _postsCubit.getPosts();
+    }
   }
 
   @override
   void dispose() {
     _postsCubit.disconnectWebSocket();
     _scrollController.dispose();
+    _tabController.dispose();
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) {
+      if (_tabController.index == 0) {
+        _postsCubit.switchToPublicChannel();
+      } else {
+        _postsCubit.switchToPrivateChannel();
+      }
+    }
   }
 
   void _onScroll() {
@@ -87,6 +113,20 @@ class _PostsViewState extends State<PostsView> {
   }
 
   bool get _isAdmin => RoleUtils.isAdmin(widget.user.role);
+  bool get _isParent => widget.user.role.toLowerCase() == 'parent';
+
+  Widget _buildTabBar() {
+    return TabBar(
+      controller: _tabController,
+      indicatorColor: Theme.of(context).colorScheme.primary,
+      labelColor: Theme.of(context).colorScheme.primary,
+      unselectedLabelColor: Colors.grey[600],
+      tabs: [
+        Tab(icon: Icon(Icons.public, size: 20), text: 'Public Channel'),
+        Tab(icon: Icon(Icons.lock, size: 20), text: 'Private Channel'),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,152 +144,184 @@ class _PostsViewState extends State<PostsView> {
           ),
         ],
       ),
-      body: BlocConsumer<PostsCubit, PostsState>(
-        listener: (context, state) {
-          if (state is PostsError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
-          } else if (state is PostCreated) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(S.of(context).postCreatedSuccessfully)),
-            );
-            // Refresh posts after creating a new one
-            _postsCubit.getPosts();
-          } else if (state is PostDeleted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(S.of(context).postDeletedSuccessfully)),
-            );
-          } else if (state is PostsLoaded && _pendingNewPosts.isNotEmpty) {
-            // If new posts are pending, show the banner
-            setState(() {
-              _showNewPostsBanner = true;
-            });
-          }
-        },
-        builder: (context, state) {
-          List<PostModel> posts = [];
-          if (state is PostsLoaded) {
-            posts = state.posts;
-          }
-          return Stack(
-            children: [
-              if (state is PostsLoading)
-                Skeletonizer(
-                  enabled: true,
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(8),
-                    itemCount: 4,
-                    itemBuilder: (context, index) {
-                      return _buildSkeletonPostCard();
-                    },
-                  ),
-                )
-              else if (state is PostsLoaded && posts.isNotEmpty)
-                RefreshIndicator(
-                  onRefresh: () async {
-                    _postsCubit.getPosts();
+      body: _isParent ? _buildParentView() : _buildPostsBody(),
+      floatingActionButton: _isAdmin ? _buildCreateButton() : null,
+    );
+  }
+
+  Widget _buildParentView() {
+    return Column(
+      children: [
+        _buildTabBar(),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [_buildPostsBody(), _buildPostsBody()],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPostsBody() {
+    return BlocConsumer<PostsCubit, PostsState>(
+      listener: (context, state) {
+        if (state is PostsError) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        } else if (state is PostCreated) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(S.of(context).postCreatedSuccessfully)),
+          );
+          // Refresh posts after creating a new one
+          _postsCubit.getPosts();
+        } else if (state is PostEdited) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Post updated successfully')));
+        } else if (state is PostDeleted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(S.of(context).postDeletedSuccessfully)),
+          );
+        } else if (state is PostsLoaded && _pendingNewPosts.isNotEmpty) {
+          // If new posts are pending, show the banner
+          setState(() {
+            _showNewPostsBanner = true;
+          });
+        }
+      },
+      builder: (context, state) {
+        List<PostModel> posts = [];
+        if (state is PostsLoaded) {
+          posts = state.posts;
+        }
+        return Stack(
+          children: [
+            if (state is PostsLoading)
+              Skeletonizer(
+                enabled: true,
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(8),
+                  itemCount: 4,
+                  itemBuilder: (context, index) {
+                    return _buildSkeletonPostCard();
                   },
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(8),
-                    itemCount: posts.length,
-                    itemBuilder: (context, index) {
-                      final post = posts[index];
-                      return PostCard(
-                        post: _convertPostModelToMap(post),
-                        user: widget.user,
-                        isAdmin: _isAdmin,
-                        onLike: () => _likePost(post.id),
-                        onComment: () =>
-                            _showComments(_convertPostModelToMap(post)),
-                        onFiles: () => _showFiles(_convertPostModelToMap(post)),
-                        onSave: () => _savePost(post.id),
-                        onEdit: _isAdmin
-                            ? () => _editPost(_convertPostModelToMap(post))
-                            : null,
-                        onDelete: _isAdmin ? () => _deletePost(post.id) : null,
-                      );
-                    },
-                  ),
-                )
-              else if (state is PostsError)
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.grey[400],
+                ),
+              )
+            else if (state is PostsLoaded && posts.isNotEmpty)
+              RefreshIndicator(
+                onRefresh: () async {
+                  if (_isParent) {
+                    if (_postsCubit.isPublicChannel) {
+                      await _postsCubit.getPosts();
+                    } else {
+                      final sectionId = await UserModel.getSectionId();
+                      if (sectionId > 0) {
+                        await _postsCubit.getPostsBySection(sectionId);
+                      }
+                    }
+                  } else {
+                    _postsCubit.getPosts();
+                  }
+                },
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(8),
+                  itemCount: posts.length,
+                  itemBuilder: (context, index) {
+                    final post = posts[index];
+                    return PostCard(
+                      post: _convertPostModelToMap(post),
+                      user: widget.user,
+                      isAdmin: _isAdmin,
+                      onLike: () => _likePost(post.id),
+                      onComment: () =>
+                          _showComments(_convertPostModelToMap(post)),
+                      onFiles: () => _showFiles(_convertPostModelToMap(post)),
+                      onEdit: _isAdmin
+                          ? () => _editPost(_convertPostModelToMap(post))
+                          : null,
+                      onDelete: _isAdmin ? () => _deletePost(post.id) : null,
+                    );
+                  },
+                ),
+              )
+            else if (state is PostsError)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading posts',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error loading posts',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.message,
+                      style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => _postsCubit.getPosts(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              _buildEmptyState(),
+            if (_showNewPostsBanner)
+              Positioned(
+                top: 16,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: _onNewPostsBannerTap,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        state.message,
-                        style: TextStyle(color: Colors.grey[500], fontSize: 14),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => _postsCubit.getPosts(),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                _buildEmptyState(),
-              if (_showNewPostsBanner)
-                Positioned(
-                  top: 16,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: _onNewPostsBannerTap,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blueAccent,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          'New posts available',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
                           ),
+                        ],
+                      ),
+                      child: Text(
+                        'New posts available',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
                     ),
                   ),
                 ),
-            ],
-          );
-        },
-      ),
-      floatingActionButton: _isAdmin ? _buildCreateButton() : null,
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -264,20 +336,19 @@ class _PostsViewState extends State<PostsView> {
       'authorAvatar': post.user.isNotEmpty ? post.user[0].toUpperCase() : 'U',
       'date': post.createdAt.toIso8601String().split('T')[0],
       'time': _getTimeAgo(post.createdAt),
+      'isPublic': post.isPublic,
+      'sections': post.sections,
       'likes': 0, // TODO: Add likes functionality
       'comments': post.comments.length,
       'shares': 0, // TODO: Add shares functionality
       'isLiked': false, // TODO: Add like state
-      'isSaved': false, // TODO: Add save state
       'images': post.attachments
           .where((a) => a.isImage)
           .map((a) => baseUrl + a.file)
           .toList(),
       'attachments': post.attachments.map((a) {
-        final filePath = a.file ?? '';
-        final name = filePath.split('/').isNotEmpty
-            ? filePath.split('/').last
-            : '';
+        final filePath = a.file;
+        final name = filePath.split('/').last;
         final type = name.contains('.') ? name.split('.').last : '';
         return {
           'name': name,
@@ -412,17 +483,18 @@ class _PostsViewState extends State<PostsView> {
     }
   }
 
-  void _savePost(int postId) {
-    // TODO: Implement save functionality with API
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(S.of(context).postSavedToFavorites)));
-  }
-
   void _editPost(Map<String, dynamic> post) {
-    // TODO: Implement edit post functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(S.of(context).editFunctionalityComingSoon)),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => EditPostBottomSheet(
+        initialTitle: post['title'] ?? '',
+        initialContent: post['content'] ?? '',
+        onPostEdited: (title, content) {
+          _postsCubit.editPost(postId: post['id'], text: content);
+        },
+      ),
     );
   }
 

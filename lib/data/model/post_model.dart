@@ -79,7 +79,15 @@ class PostModel {
       isPublic: json['is_public'] ?? false,
       title: json['title'] ?? '',
       text: json['text'] ?? '',
-      sections: List<String>.from(json['sections'] ?? []),
+      sections:
+          (json['sections'] as List<dynamic>?)
+              ?.map(
+                (section) => section is Map<String, dynamic>
+                    ? '${section['name']} (${section['grade']})'
+                    : section.toString(),
+              )
+              .toList() ??
+          [],
       createdAt: DateTime.parse(
         json['created_at'] ?? DateTime.now().toIso8601String(),
       ),

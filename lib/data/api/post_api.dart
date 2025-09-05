@@ -28,6 +28,27 @@ class PostApi {
     }
   }
 
+  Future<List<PostModel>> getPostsBySection(int sectionId) async {
+    try {
+      final response = await _apiService.get(
+        '${ApiEndpoints.posts}?sections=$sectionId',
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final List<dynamic> postsData = response.data;
+        return postsData
+            .map((postJson) => PostModel.fromJson(postJson))
+            .toList();
+      } else {
+        throw Exception(
+          'Failed to fetch posts by section. Status code: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<PostModel> createPost({
     required String title,
     required String text,
@@ -44,9 +65,7 @@ class PostApi {
 
       // Only add section_ids if isPublic is false and sectionIds is not empty
       if (!isPublic && sectionIds.isNotEmpty) {
-        for (final id in sectionIds) {
-          formData.fields.add(MapEntry('section_ids', id));
-        }
+        formData.fields.add(MapEntry('section_ids', sectionIds.join(',')));
       }
 
       // Attachments are optional
@@ -72,6 +91,28 @@ class PostApi {
       } else {
         throw Exception(
           'Failed to create post. Status code:  {response.statusCode}',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<PostModel> editPost({
+    required int postId,
+    required String text,
+  }) async {
+    try {
+      final response = await _apiService.patch(
+        '${ApiEndpoints.posts}/$postId',
+        data: {'text': text},
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        return PostModel.fromJson(response.data);
+      } else {
+        throw Exception(
+          'Failed to edit post. Status code: ${response.statusCode}',
         );
       }
     } catch (e) {

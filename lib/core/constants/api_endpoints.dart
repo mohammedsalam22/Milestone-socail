@@ -1,7 +1,7 @@
 class ApiEndpoints {
   // Base URLs
-  static const String baseUrl = 'http://10.218.65.81:8000';
-  static const String wsBaseUrl = 'ws://10.218.65.81:8000';
+  static const String baseUrl = 'http://10.199.2.81:8000';
+  static const String wsBaseUrl = 'ws://10.199.2.81:8000';
 
   // REST API Endpoints
   static const String login = '/api/users/auth/login/';

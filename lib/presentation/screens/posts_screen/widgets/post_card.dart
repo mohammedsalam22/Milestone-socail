@@ -10,7 +10,6 @@ class PostCard extends StatelessWidget {
   final VoidCallback onLike;
   final VoidCallback onComment;
   final VoidCallback onFiles;
-  final VoidCallback onSave;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -22,7 +21,6 @@ class PostCard extends StatelessWidget {
     required this.onLike,
     required this.onComment,
     required this.onFiles,
-    required this.onSave,
     this.onEdit,
     this.onDelete,
   });
@@ -75,9 +73,16 @@ class PostCard extends StatelessWidget {
                     fontSize: 16,
                   ),
                 ),
-                Text(
-                  post['time'],
-                  style: TextStyle(color: Colors.grey[600]!, fontSize: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      post['time'],
+                      style: TextStyle(color: Colors.grey[600]!, fontSize: 12),
+                    ),
+                    const SizedBox(height: 2),
+                    _buildPrivacyIndicator(context),
+                  ],
                 ),
               ],
             ),
@@ -123,6 +128,29 @@ class PostCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildPrivacyIndicator(BuildContext context) {
+    final isPublic = post['isPublic'] as bool? ?? true;
+    final sections = post['sections'] as List<String>? ?? [];
+
+    if (isPublic) {
+      return Icon(Icons.public, size: 12, color: Colors.grey[600]!);
+    } else {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.lock, size: 12, color: Colors.orange[600]!),
+          if (sections.isNotEmpty) ...[
+            const SizedBox(width: 4),
+            Text(
+              '• ${sections.join(', ')}',
+              style: TextStyle(color: Colors.grey[600]!, fontSize: 11),
+            ),
+          ],
+        ],
+      );
+    }
   }
 
   Widget _buildPostContent(BuildContext context) {
@@ -359,15 +387,6 @@ class PostCard extends StatelessWidget {
                 label: hasNonImageFiles ? S.of(context).files : 'Images',
                 color: Colors.grey[600]!,
                 onTap: onFiles,
-              ),
-            ),
-          if (!isAdmin)
-            Expanded(
-              child: _buildActionButton(
-                icon: post['isSaved'] ? Icons.bookmark : Icons.bookmark_border,
-                label: S.of(context).save,
-                color: post['isSaved'] ? Colors.blue[600]! : Colors.grey[600]!,
-                onTap: onSave,
               ),
             ),
         ],

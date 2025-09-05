@@ -24,6 +24,12 @@ class PostCreated extends PostsState {
   PostCreated(this.post);
 }
 
+class PostEdited extends PostsState {
+  final PostModel post;
+
+  PostEdited(this.post);
+}
+
 class PostDeleted extends PostsState {
   final int postId;
 
