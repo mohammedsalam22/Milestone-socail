@@ -23,6 +23,9 @@ import 'dart:convert';
 import 'presentation/screens/navigation/role_based_navigation.dart';
 import 'data/model/user_model.dart';
 import 'generated/l10n.dart';
+import 'data/services/attendance_notification_service.dart';
+import 'data/services/network_connectivity_manager.dart';
+import 'data/services/attendance_sync_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,13 +33,33 @@ Future<void> main() async {
   // 1. build the dependency graph
   DIContainer.setup();
 
-  // 2. Initialize locale from preferences
+  // 2. Initialize offline services
+  await _initializeOfflineServices();
+
+  // 3. Initialize locale from preferences
   final prefs = await SharedPreferences.getInstance();
   final languageCode = prefs.getString('language_code') ?? 'en';
   localeNotifier.value = Locale(languageCode);
 
-  // 3. start the app
+  // 4. start the app
   runApp(const MyApp());
+}
+
+Future<void> _initializeOfflineServices() async {
+  try {
+    // Initialize notification service
+    await AttendanceNotificationService.initialize();
+
+    // Initialize network connectivity manager
+    await NetworkConnectivityManager.initialize();
+
+    // Initialize sync service
+    await DIContainer.get<AttendanceSyncService>().initialize();
+
+    print('✅ Offline services initialized successfully');
+  } catch (e) {
+    print('❌ Error initializing offline services: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {

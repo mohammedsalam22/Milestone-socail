@@ -108,4 +108,49 @@ class AttendanceApi {
       throw Exception('Error updating attendance: $e');
     }
   }
+
+  // Check if attendance record exists on server
+  Future<AttendanceModel?> getAttendanceRecord({
+    required int studentId,
+    required DateTime date,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.attendances,
+        params: {
+          'student': studentId.toString(),
+          'date': date.toIso8601String().split('T')[0],
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        if (data.isNotEmpty) {
+          return AttendanceModel.fromJson(data.first);
+        }
+      }
+      return null;
+    } catch (e) {
+      return null; // Record doesn't exist
+    }
+  }
+
+  // Create single attendance record
+  Future<void> createAttendance(AttendanceModel attendance) async {
+    try {
+      // Wrap single record in a list as the API expects
+      final body = [attendance.toCreateJson()];
+
+      final response = await _apiService.post(
+        ApiEndpoints.attendances,
+        data: body,
+      );
+
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception('Failed to create attendance: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error creating attendance: $e');
+    }
+  }
 }

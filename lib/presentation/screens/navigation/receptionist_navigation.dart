@@ -4,6 +4,9 @@ import '../chats_screen/chat_view.dart';
 import '../incidents_screen/incidents_view.dart';
 import '../attendance_screen/attendance_view.dart';
 import '../profile_screen/profile_view.dart';
+import '../local_data_screen/local_data_screen.dart';
+import '../../../data/repo/attendance_repo.dart';
+import '../../../di_container.dart';
 
 class ReceptionistNavigation extends StatefulWidget {
   final UserModel user;
@@ -26,6 +29,7 @@ class _ReceptionistNavigationState extends State<ReceptionistNavigation> {
       ChatsView(user: widget.user),
       IncidentsView(user: widget.user),
       AttendanceView(user: widget.user),
+      LocalDataScreen(attendanceRepo: DIContainer.get<AttendanceRepo>()),
       ProfileView(user: widget.user),
     ]);
   }
@@ -51,6 +55,10 @@ class _ReceptionistNavigationState extends State<ReceptionistNavigation> {
           BottomNavigationBarItem(
             icon: Icon(Icons.people),
             label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.storage),
+            label: 'Local Data',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

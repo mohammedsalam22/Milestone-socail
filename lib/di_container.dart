@@ -39,6 +39,9 @@ import 'data/repo/group_chat_repo.dart';
 import 'data/repo/attendance_repo.dart';
 import 'data/repo/mark_repo.dart';
 import 'data/repo/schedule_repo.dart';
+import 'data/services/attendance_local_db.dart';
+import 'data/services/attendance_sync_service.dart';
+import 'data/services/attendance_notification_service.dart';
 
 class DIContainer {
   static final GetIt _getIt = GetIt.instance;
@@ -84,6 +87,19 @@ class DIContainer {
       () => ScheduleApi(_getIt<ApiService>()),
     );
 
+    // Offline Services
+    _getIt.registerLazySingleton<AttendanceLocalDb>(() => AttendanceLocalDb());
+    _getIt.registerLazySingleton<AttendanceNotificationService>(
+      () => AttendanceNotificationService(),
+    );
+    _getIt.registerLazySingleton<AttendanceSyncService>(
+      () => AttendanceSyncService(
+        apiService: _getIt<AttendanceApi>(),
+        localDb: _getIt<AttendanceLocalDb>(),
+        notificationService: _getIt<AttendanceNotificationService>(),
+      ),
+    );
+
     // Repositories
     _getIt.registerLazySingleton<LoginRepo>(
       () => LoginRepo(_getIt<LoginApi>()),
@@ -109,7 +125,11 @@ class DIContainer {
       () => GroupChatRepo(_getIt<GroupChatApi>()),
     );
     _getIt.registerLazySingleton<AttendanceRepo>(
-      () => AttendanceRepo(_getIt<AttendanceApi>()),
+      () => AttendanceRepo(
+        _getIt<AttendanceApi>(),
+        _getIt<AttendanceLocalDb>(),
+        _getIt<AttendanceSyncService>(),
+      ),
     );
     _getIt.registerLazySingleton<MarkRepo>(() => MarkRepo(_getIt<MarkApi>()));
     _getIt.registerLazySingleton<ScheduleRepository>(

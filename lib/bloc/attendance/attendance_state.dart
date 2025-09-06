@@ -29,3 +29,9 @@ class AttendanceError extends AttendanceState {
 
   AttendanceError(this.message);
 }
+
+class AttendanceMessage extends AttendanceState {
+  final String message;
+
+  AttendanceMessage(this.message);
+}
