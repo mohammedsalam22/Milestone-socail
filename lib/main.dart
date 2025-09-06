@@ -11,6 +11,7 @@ import 'bloc/students/students_cubit.dart';
 import 'bloc/attendance/attendance_cubit.dart';
 import 'bloc/marks/marks_cubit.dart';
 import 'bloc/schedule/schedule_cubit.dart';
+import 'bloc/notifications/notification_cubit.dart';
 
 // theme / ui
 import 'core/theme/app_theme.dart';
@@ -24,6 +25,7 @@ import 'presentation/screens/navigation/role_based_navigation.dart';
 import 'data/model/user_model.dart';
 import 'generated/l10n.dart';
 import 'data/services/attendance_notification_service.dart';
+import 'data/services/parent_notification_service.dart';
 import 'data/services/network_connectivity_manager.dart';
 import 'data/services/attendance_sync_service.dart';
 
@@ -47,8 +49,9 @@ Future<void> main() async {
 
 Future<void> _initializeOfflineServices() async {
   try {
-    // Initialize notification service
+    // Initialize notification services
     await AttendanceNotificationService.initialize();
+    await ParentNotificationService.initialize();
 
     // Initialize network connectivity manager
     await NetworkConnectivityManager.initialize();
@@ -120,6 +123,9 @@ class MyApp extends StatelessWidget {
         BlocProvider<MarksCubit>(create: (_) => DIContainer.get<MarksCubit>()),
         BlocProvider<ScheduleCubit>(
           create: (_) => DIContainer.get<ScheduleCubit>(),
+        ),
+        BlocProvider<NotificationCubit>(
+          create: (_) => DIContainer.get<NotificationCubit>(),
         ),
       ],
       child: ValueListenableBuilder<bool>(

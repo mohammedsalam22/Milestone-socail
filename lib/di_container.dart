@@ -14,6 +14,7 @@ import 'bloc/group_chat/group_chat_cubit.dart';
 import 'bloc/attendance/attendance_cubit.dart';
 import 'bloc/marks/marks_cubit.dart';
 import 'bloc/schedule/schedule_cubit.dart';
+import 'bloc/notifications/notification_cubit.dart';
 import 'core/servcies/api_service.dart';
 import 'data/api/login_api.dart';
 import 'data/api/post_api.dart';
@@ -165,6 +166,7 @@ class DIContainer {
     _getIt.registerFactory<ScheduleCubit>(
       () => ScheduleCubit(scheduleRepository: _getIt<ScheduleRepository>()),
     );
+    _getIt.registerLazySingleton<NotificationCubit>(() => NotificationCubit());
   }
 
   // Getter methods

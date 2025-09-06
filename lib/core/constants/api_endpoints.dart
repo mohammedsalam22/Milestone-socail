@@ -22,6 +22,7 @@ class ApiEndpoints {
   static const String chatWebSocket = '/ws/chat';
   static const String groupChatWebSocket = '/ws/group-chat';
   static const String postsWebSocket = '/ws/posts';
+  static const String notificationsWebSocket = '/ws/notifications';
 
   // Helper methods for WebSocket URLs
   static String getChatWebSocketUrl(int roomId, String token) {
@@ -34,5 +35,9 @@ class ApiEndpoints {
 
   static String getPostsWebSocketUrl(String token) {
     return '$wsBaseUrl$postsWebSocket/?token=$token';
+  }
+
+  static String getNotificationsWebSocketUrl(String token) {
+    return '$wsBaseUrl$notificationsWebSocket/?token=$token';
   }
 }
